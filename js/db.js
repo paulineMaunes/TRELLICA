@@ -172,9 +172,14 @@ async function importAll(data, { replace = false } = {}) {
 
 /** Seed default grade categories + optional seed.json students/subjects */
 async function ensureDefaults() {
-  const SEED_OWNER = (window.Roles && Roles.SUPERADMIN) || 'joanepauline.maunes@laverdad.edu.ph';
-  const currentEmail = (window.Auth && (Auth.getUser && Auth.getUser() || Auth.currentUser && Auth.currentUser()) || {}).email || '';
-  const maySeedDefaults = currentEmail.toLowerCase() === SEED_OWNER.toLowerCase();
+  const SEED_OWNER = ((window.Roles && Roles.SUPERADMIN) || 'joanepauline.maunes@laverdad.edu.ph').toLowerCase();
+  let currentEmail = '';
+  try {
+    const u = (window.Auth && (Auth.getUser ? Auth.getUser() : null)) || (window.Auth && Auth.currentUser ? Auth.currentUser() : null) || null;
+    currentEmail = (u && u.email) ? String(u.email).toLowerCase() : '';
+  } catch (_) {}
+  const maySeedDefaults = currentEmail === SEED_OWNER;
+  console.log('[Trellica seed]', { currentEmail, maySeedDefaults, db: typeof DB_NAME !== 'undefined' ? DB_NAME : '?' });
 
   // NEVER wipe user data on app updates.
   // Seed bundled roster/subjects only when the students store is empty
@@ -184,7 +189,7 @@ async function ensureDefaults() {
   if (!meta) meta = { id: 1 };
 
   const existingStudents = await getAll('students');
-  if (maySeedDefaults && existingStudents.length === 0 && !meta.seedCompleted) {
+  if (maySeedDefaults && existingStudents.length === 0) {
     try {
       const res = await fetch('./data/seed.json', { cache: 'no-store' });
       if (res.ok) {

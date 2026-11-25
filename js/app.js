@@ -48,8 +48,8 @@ const App = (() => {
         </div>
         <div class="hub-grid ${view === 'list' ? 'list' : ''}">
           ${list.map((it) => `
-            <button type="button" class="hub-card" data-go="${escapeAttr(it.route)}">
-              <div class="hub-icon" style="background:${escapeAttr(it.color || 'var(--brand)')}">${it.icon || '•'}</div>
+            <button type="button" class="hub-card" data-go="${escapeAttr(it.route)}" style="background:${escapeAttr(it.color || '#2563EB')}">
+              <div class="hub-icon">${it.icon || '•'}</div>
               <div>
                 <h3>${escapeHtml(it.title)}</h3>
                 <p>${escapeHtml(it.desc)}</p>
@@ -75,24 +75,24 @@ const App = (() => {
   function renderRecordsHub(container) {
     renderHubGrid(container, 'Records', [
       { route: 'students', title: 'Student Records', desc: 'View and manage enrolled student profiles and records.', icon: '👥', color: '#0D9488' },
-      { route: 'subjects', title: 'Subject Management', desc: 'Create, edit, and organize subjects and sections.', icon: '📚', color: '#2563EB' },
-      { route: 'enrollment', title: 'Enrollment', desc: 'Manage student enrollment and section assignments.', icon: '🔗', color: '#7C3AED' },
-      { route: 'gradebook', title: 'Gradebook', desc: 'Compute, review, and manage class grades.', icon: '📊', color: '#059669' },
-      { route: 'officers', title: 'Class Officers', desc: 'Assign and manage class officers.', icon: '★', color: '#D97706' },
-      { route: 'viewgrades', title: 'Individual Grades', desc: 'Inspect grade breakdowns per student.', icon: '📑', color: '#DC2626' }
+      { route: 'subjects', title: 'Subject Management', desc: 'Create, edit, and organize subjects and sections.', icon: '📚', color: '#14B8A6' },
+      { route: 'enrollment', title: 'Enrollment', desc: 'Manage student enrollment and section assignments.', icon: '🔗', color: '#8B5CF6' },
+      { route: 'gradebook', title: 'Gradebook', desc: 'Compute, review, and manage class grades.', icon: '📊', color: '#22C55E' },
+      { route: 'officers', title: 'Class Officers', desc: 'Assign and manage class officers.', icon: '★', color: '#F59E0B' },
+      { route: 'viewgrades', title: 'Individual Grades', desc: 'Inspect grade breakdowns per student.', icon: '📑', color: '#F43F5E' }
     ], { id: 'records', viewKey: 'trellica_records_view' });
   }
 
   function renderToolsHub(container) {
     renderHubGrid(container, 'Tools', [
-      { route: 'recitation', title: 'Random / Recitation', desc: 'Pick students randomly for recitation and participation.', icon: '🦆', color: '#0EA5E9' },
-      { route: 'grouper', title: 'Group Maker', desc: 'Generate and shuffle student groups.', icon: '⬡', color: '#8B5CF6' },
-      { route: 'seating', title: 'Seating Plan', desc: 'Arrange and manage classroom seating layouts.', icon: '▦', color: '#2563EB' },
-      { route: 'project', title: 'Group Project Tracker', desc: 'Track group milestones, deliverables, and progress.', icon: '📁', color: '#059669' },
-      { route: 'timer', title: 'Classroom Timer', desc: 'Run countdowns/timers for activities and exams.', icon: '⏱', color: '#DB2777' },
-      { route: 'present', title: 'Presentation', desc: 'Launch classroom presentations and slides.', icon: '🖥', color: '#EA580C' },
-      { route: 'peer', title: 'Peer Evaluation', desc: 'Collect and review peer assessment feedback.', icon: '◎', color: '#7C3AED' },
-      { route: 'qr', title: 'QR Codes', desc: 'Generate and use QR codes for quick classroom workflows.', icon: '▣', color: '#0D9488' }
+      { route: 'recitation', title: 'Random / Recitation', desc: 'Pick students randomly for recitation and participation.', icon: '🎯', color: '#14B8A6' },
+      { route: 'grouper', title: 'Group Maker', desc: 'Generate and shuffle student groups.', icon: '👥', color: '#8B5CF6' },
+      { route: 'seating', title: 'Seating Plan', desc: 'Arrange and manage classroom seating layouts.', icon: '▦', color: '#0EA5E9' },
+      { route: 'project', title: 'Group Project Tracker', desc: 'Track group milestones, deliverables, and progress.', icon: '📋', color: '#3B82F6' },
+      { route: 'timer', title: 'Classroom Timer', desc: 'Run countdowns/timers for activities and exams.', icon: '⏱', color: '#EC4899' },
+      { route: 'present', title: 'Presentation', desc: 'Launch classroom presentations and slides.', icon: '🖥', color: '#F59E0B' },
+      { route: 'peer', title: 'Peer Evaluation', desc: 'Collect and review peer assessment feedback.', icon: '◎', color: '#A855F7' },
+      { route: 'qr', title: 'QR Codes', desc: 'Generate and use QR codes for quick classroom workflows.', icon: '▣', color: '#10B981' }
     ], { id: 'tools', viewKey: 'trellica_tools_view' });
   }
 

@@ -279,8 +279,10 @@ const Sync = (() => {
           <button class="btn btn-secondary" id="sync-gconnect">${accessToken ? 'Reconnect Drive' : 'Connect Google Drive'}</button>
           <button class="btn btn-primary" id="sync-gupload" ${!googleUser ? 'disabled title="Sign in with Google first"' : ''}>Upload backup</button>
           <button class="btn btn-secondary" id="sync-gdownload" ${!googleUser ? 'disabled title="Sign in with Google first"' : ''}>Restore latest</button>
+          ${googleUser ? '<p class="text-muted" style="width:100%;font-size:12px;margin-top:6px">Signed in as ' + escapeHtml(u.email || '') + '</p>' : ''}
         </div>
-        ${!googleUser ? '<p class="text-muted" style="margin-top:10px;font-size:12.5px">You are in offline mode. Sign out and sign in with Google to enable Drive sync.</p>' : ''}
+        ${!googleUser ? '<p class="text-muted" style="margin-top:10px;font-size:12.5px">Sign in with Google (not offline) to enable Drive sync.</p>' :
+          (!accessToken ? '<p class="text-muted" style="margin-top:10px;font-size:12.5px">Click <strong>Connect Google Drive</strong> once to authorize backup upload/restore.</p>' : '<p class="text-muted" style="margin-top:10px;font-size:12.5px;color:var(--success)">Drive connected — upload and restore are ready.</p>')}
       </div>
     `;
     container.querySelector('#sync-export').addEventListener('click', exportJson);

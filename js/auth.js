@@ -77,11 +77,22 @@ const Auth = (() => {
     const strong = chip.querySelector('strong');
     const span = chip.querySelector('.email');
     if (img) {
-      img.src = u.picture || '';
-      img.style.display = u.picture ? 'block' : 'none';
+      if (u.picture) {
+        img.src = u.picture;
+        img.style.display = 'block';
+        img.style.width = '28px';
+        img.style.height = '28px';
+        img.style.borderRadius = '50%';
+        img.style.objectFit = 'cover';
+      } else {
+        img.style.display = 'none';
+      }
     }
-    if (strong) strong.textContent = u.name || u.email || 'User';
-    if (span) span.textContent = u.email || '';
+    if (strong) strong.textContent = u.name || (u.email ? u.email.split('@')[0] : 'User');
+    if (span) {
+      span.textContent = u.email || (u.mode === 'offline' ? 'Local only' : '');
+      span.title = u.email || '';
+    }
   }
 
   function decodeJwt(token) {
@@ -216,7 +227,10 @@ const Auth = (() => {
 
   function isGoogleUser() {
     const u = currentUser();
-    return !!(u && u.mode !== 'offline' && u.email && u.sub !== 'offline');
+    if (!u) return false;
+    if (u.mode === 'offline' || u.sub === 'offline') return false;
+    // Any signed-in account with email (Google GIS or domain demo) can use Drive
+    return !!(u.email && String(u.email).includes('@'));
   }
 
   // Compatibility aliases used by app.js
