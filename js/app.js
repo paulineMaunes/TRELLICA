@@ -30,6 +30,8 @@ function toast(msg, type = '') {
 const App = (() => {
   const routes = {
     dashboard: { title: 'Dashboard', render: renderDashboard },
+    records: { title: 'Records Hub', render: renderRecordsHub },
+    tools: { title: 'Tools Hub', render: renderToolsHub },
     attendance: { title: 'Attendance', render: (el) => AttendanceModule.render(el) },
     students: { title: 'Student Records', render: (el) => StudentsModule.render(el) },
     subjects: { title: 'Subject Management', render: (el) => SubjectsModule.render(el) },
@@ -125,6 +127,35 @@ const App = (() => {
       document.getElementById('sidebar').classList.toggle('open');
     });
 
+    // GradeSync-style system popover
+    const sysBtn = document.getElementById('btn-sys-menu');
+    const sysPop = document.getElementById('sys-popover');
+    sysBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sysPop?.classList.toggle('open');
+    });
+    document.addEventListener('click', () => sysPop?.classList.remove('open'));
+    sysPop?.addEventListener('click', (e) => e.stopPropagation());
+    sysPop?.querySelectorAll('[data-sys]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const a = btn.dataset.sys;
+        sysPop.classList.remove('open');
+        if (a === 'sync') navigate('sync');
+        else if (a === 'theme') toggleTheme();
+        else if (a === 'restart') location.reload();
+        else if (a === 'lock') {
+          if (Auth.logout) Auth.logout();
+          else if (Auth.signOut) Auth.signOut();
+        }
+      });
+    });
+    // Keep signout button
+    document.getElementById('btn-signout')?.addEventListener('click', () => {
+      if (Auth.logout) Auth.logout();
+      else if (Auth.signOut) Auth.signOut();
+    });
+
+
     // Nav groups
     document.querySelectorAll('.nav-parent').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -184,6 +215,17 @@ const App = (() => {
         escapeHtml(String(err && err.message ? err.message : err)) + '</pre><button class="btn btn-secondary" id="retry-nav">Back to Dashboard</button></div>';
       content.querySelector('#retry-nav')?.addEventListener('click', () => navigate('dashboard'));
     }
+    
+    // Hub parents stay highlighted for child modules
+    const recordsRoutes = ['students','subjects','enrollment','gradebook','officers','viewgrades','indivgrades','records'];
+    const toolsRoutes = ['recitation','picker','grouper','seating','project','projects','timer','present','peer','qr','tools'];
+    document.querySelectorAll('.nav-btn[data-route="records"]').forEach((b) => {
+      if (recordsRoutes.includes(route)) b.classList.add('active');
+    });
+    document.querySelectorAll('.nav-btn[data-route="tools"]').forEach((b) => {
+      if (toolsRoutes.includes(route)) b.classList.add('active');
+    });
+
     document.getElementById('sidebar')?.classList.remove('open');
     // show build version in footer chip if present
     const bv = document.getElementById('build-version');
@@ -463,6 +505,75 @@ const App = (() => {
       window.open(url, '_blank');
     });
   }
+
+
+  function renderHubGrid(container, title, items, opts = {}) {
+    const viewKey = opts.viewKey || 'hub_view';
+    let view = localStorage.getItem(viewKey) || 'grid';
+    const qid = 'hub-q-' + (opts.id || 'x');
+    function paint(filter = '') {
+      const f = filter.trim().toLowerCase();
+      const list = !f ? items : items.filter((it) =>
+        (it.title + ' ' + it.desc).toLowerCase().includes(f)
+      );
+      container.innerHTML = `
+        <div class="hub-toolbar">
+          <div class="search-wrap"><input id="${qid}" type="search" placeholder="Search ${title}…" value="${escapeAttr(filter)}"></div>
+          <div class="hub-view-toggle">
+            <button type="button" class="${view === 'grid' ? 'active' : ''}" data-view="grid" title="Grid">▦</button>
+            <button type="button" class="${view === 'list' ? 'active' : ''}" data-view="list" title="List">☰</button>
+          </div>
+        </div>
+        <div class="hub-grid ${view === 'list' ? 'list' : ''}">
+          ${list.map((it) => `
+            <button type="button" class="hub-card" data-go="${escapeAttr(it.route)}">
+              <div class="hub-icon" style="background:${escapeAttr(it.color || 'var(--brand)')}">${it.icon || '•'}</div>
+              <div>
+                <h3>${escapeHtml(it.title)}</h3>
+                <p>${escapeHtml(it.desc)}</p>
+              </div>
+            </button>`).join('') || '<p class="text-muted">No matches.</p>'}
+        </div>`;
+      container.querySelectorAll('[data-go]').forEach((btn) => {
+        btn.addEventListener('click', () => navigate(btn.dataset.go));
+      });
+      container.querySelectorAll('[data-view]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          view = btn.dataset.view;
+          localStorage.setItem(viewKey, view);
+          paint(container.querySelector('#' + qid)?.value || '');
+        });
+      });
+      const input = container.querySelector('#' + qid);
+      input?.addEventListener('input', () => paint(input.value));
+    }
+    paint();
+  }
+
+  function renderRecordsHub(container) {
+    renderHubGrid(container, 'Records', [
+      { route: 'students', title: 'Student Records', desc: 'View and manage enrolled student profiles and records.', icon: '👥', color: '#0D9488' },
+      { route: 'subjects', title: 'Subject Management', desc: 'Create, edit, and organize subjects and sections.', icon: '📚', color: '#2563EB' },
+      { route: 'enrollment', title: 'Enrollment', desc: 'Manage student enrollment and section assignments.', icon: '🔗', color: '#7C3AED' },
+      { route: 'gradebook', title: 'Gradebook', desc: 'Compute, review, and manage class grades.', icon: '📊', color: '#059669' },
+      { route: 'officers', title: 'Class Officers', desc: 'Assign and manage class officers.', icon: '★', color: '#D97706' },
+      { route: 'viewgrades', title: 'Individual Grades', desc: 'Inspect grade breakdowns per student.', icon: '📑', color: '#DC2626' }
+    ], { id: 'records', viewKey: 'trellica_records_view' });
+  }
+
+  function renderToolsHub(container) {
+    renderHubGrid(container, 'Tools', [
+      { route: 'recitation', title: 'Random / Recitation', desc: 'Pick students randomly for recitation and participation.', icon: '🦆', color: '#0EA5E9' },
+      { route: 'grouper', title: 'Group Maker', desc: 'Generate and shuffle student groups.', icon: '⬡', color: '#8B5CF6' },
+      { route: 'seating', title: 'Seating Plan', desc: 'Arrange and manage classroom seating layouts.', icon: '▦', color: '#2563EB' },
+      { route: 'project', title: 'Group Project Tracker', desc: 'Track group milestones, deliverables, and progress.', icon: '📁', color: '#059669' },
+      { route: 'timer', title: 'Classroom Timer', desc: 'Run countdowns/timers for activities and exams.', icon: '⏱', color: '#DB2777' },
+      { route: 'present', title: 'Presentation', desc: 'Launch classroom presentations and slides.', icon: '🖥', color: '#EA580C' },
+      { route: 'peer', title: 'Peer Evaluation', desc: 'Collect and review peer assessment feedback.', icon: '◎', color: '#7C3AED' },
+      { route: 'qr', title: 'QR Codes', desc: 'Generate and use QR codes for quick classroom workflows.', icon: '▣', color: '#0D9488' }
+    ], { id: 'tools', viewKey: 'trellica_tools_view' });
+  }
+
 
   return { init, navigate, reload, onLogin };
 })();

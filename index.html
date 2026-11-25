@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="css/app.css">
   <script>
     // Required for real Google Sign-In + Drive (Web client ID)
-    // window.BEEPCHECK_GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
+    window.BEEPCHECK_GOOGLE_CLIENT_ID = '894498457086-sjc57leq0rt5gp9fjlbgjr8psfcljr2j.apps.googleusercontent.com';
     (function () {
       var t = localStorage.getItem('beepcheck_theme') || 'light';
       document.documentElement.setAttribute('data-theme', t);
@@ -68,37 +68,16 @@
     </div>
     <nav class="nav">
       <div class="nav-section">
-        <button class="nav-btn active" data-route="dashboard"><span class="icon">⌂</span><span class="label">Dashboard</span></button>
-      </div>
-      <div class="nav-section">
-        <button class="nav-btn" data-route="attendance"><span class="icon">✓</span><span class="label">Attendance</span></button>
-      </div>
-      <div class="nav-section">
-        <div class="nav-section-title">Records Management</div>
-        <button class="nav-btn" data-route="students"><span class="icon">👥</span><span class="label">Student Records</span></button>
-        <button class="nav-btn" data-route="subjects"><span class="icon">📚</span><span class="label">Subject Management</span></button>
-        <button class="nav-btn" data-route="enrollment"><span class="icon">🔗</span><span class="label">Enrollment</span></button>
-        <button class="nav-btn" data-route="gradebook"><span class="icon">📊</span><span class="label">Gradebook</span></button>
-        <button class="nav-btn" data-route="officers"><span class="icon">★</span><span class="label">Class Officers</span></button>
-        <button class="nav-btn" data-route="viewgrades"><span class="icon">📑</span><span class="label">Individual Grades</span></button>
-      </div>
-      <div class="nav-section">
-        <div class="nav-section-title">Tools</div>
-        <button class="nav-btn" data-route="recitation"><span class="icon">🦆</span><span class="label">Random / Recitation</span></button>
-        <button class="nav-btn" data-route="grouper"><span class="icon">⬡</span><span class="label">Group Maker</span></button>
-        <button class="nav-btn" data-route="seating"><span class="icon">▦</span><span class="label">Seating Plan</span></button>
-        <button class="nav-btn" data-route="project"><span class="icon">📁</span><span class="label">Group Project Tracker</span></button>
-        <button class="nav-btn" data-route="timer"><span class="icon">⏱</span><span class="label">Classroom Timer</span></button>
-        <button class="nav-btn" data-route="present"><span class="icon">🖥</span><span class="label">Presentation</span></button>
-        <button class="nav-btn" data-route="peer"><span class="icon">◎</span><span class="label">Peer Evaluation</span></button>
-        <button class="nav-btn" data-route="qr"><span class="icon">▣</span><span class="label">QR Codes</span></button>
+        <button class="nav-btn active" data-route="dashboard" title="Dashboard"><span class="icon">▦</span><span class="label">Dashboard</span></button>
+        <button class="nav-btn" data-route="attendance" title="Attendance"><span class="icon">✓</span><span class="label">Attendance</span></button>
+        <button class="nav-btn" data-route="records" title="Records Hub"><span class="icon">📁</span><span class="label">Records Hub</span></button>
+        <button class="nav-btn" data-route="tools" title="Tools Hub"><span class="icon">🧰</span><span class="label">Tools Hub</span></button>
       </div>
       <div class="nav-section">
         <div class="nav-section-title">More</div>
-        <button class="nav-btn" data-route="behavior"><span class="icon">✎</span><span class="label">Behavior</span></button>
-        <button class="nav-btn" data-route="sticky"><span class="icon">📌</span><span class="label">Sticky Notes</span></button>
-        <button class="nav-btn" data-route="reminders"><span class="icon">🔔</span><span class="label">Reminders</span></button>
-        <button class="nav-btn" data-route="sync"><span class="icon">☁</span><span class="label">Data & Sync</span></button>
+        <button class="nav-btn" data-route="behavior" title="Behavior"><span class="icon">✎</span><span class="label">Behavior</span></button>
+        <button class="nav-btn" data-route="sticky" title="Sticky Notes"><span class="icon">📌</span><span class="label">Sticky Notes</span></button>
+        <button class="nav-btn" data-route="reminders" title="Reminders"><span class="icon">🔔</span><span class="label">Reminders</span></button>
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -109,12 +88,25 @@
           <span class="email"></span>
         </div>
       </div>
-      <div class="build-badge" id="build-version">…</div>
+      <div class="build-badge tabular-nums" id="build-version">…</div>
       <div class="sync-status">
         <span class="sync-dot offline" id="sync-dot"></span>
         <span id="sync-label">Checking…</span>
       </div>
-      <div class="flex" style="gap:4px;justify-content:space-between">
+      <div class="sys-menu-wrap">
+        <button type="button" class="sys-menu-btn" id="btn-sys-menu" title="System menu">
+          <span>☰</span>
+          <span class="sys-label">Trellica</span>
+          <span style="margin-left:auto;opacity:.6">▴</span>
+        </button>
+        <div class="sys-popover" id="sys-popover">
+          <button type="button" data-sys="sync">☁ Data &amp; Sync</button>
+          <button type="button" data-sys="theme">◐ Toggle theme</button>
+          <button type="button" data-sys="restart">↺ Restart</button>
+          <button type="button" data-sys="lock">⎋ Sign out</button>
+        </div>
+      </div>
+      <div class="flex" style="gap:4px;justify-content:space-between;margin-top:6px">
         <button class="btn-icon" id="btn-theme" title="Toggle theme">◐</button>
         <button class="btn-icon" id="btn-collapse" title="Collapse menu">⇄</button>
         <button class="btn-icon" id="btn-signout" title="Sign out">⎋</button>
@@ -133,6 +125,8 @@
 
   <div id="toasts"></div>
 
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-app.js"></script>
   <script src="js/db.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/sync.js"></script>
