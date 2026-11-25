@@ -1,50 +1,123 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#052639">
-  <meta name="description" content="BeepCheck Pro — offline classroom management">
+  <meta name="theme-color" content="#2563EB">
+  <meta name="description" content="Trellica / BeepCheck Pro — offline classroom management">
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <title>BeepCheck Pro</title>
+  <link rel="icon" href="icons/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <title>Trellica · BeepCheck Pro</title>
   <link rel="stylesheet" href="css/app.css">
-  <!-- Optional: set your Google OAuth Web Client ID for Drive sync -->
   <script>
+    // Required for real Google Sign-In + Drive (Web client ID)
     // window.BEEPCHECK_GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
+    (function () {
+      var t = localStorage.getItem('beepcheck_theme') || 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
   </script>
 </head>
 <body>
+  <!-- Login -->
+  <div id="login-screen">
+    <div class="login-card">
+      <img class="login-logo" id="login-logo" src="assets/logos/logo-full-blue.png" alt="Trellica">
+      <h1>Welcome to Trellica</h1>
+      <p>Choose how you want to use the app on this device.</p>
+
+      <div style="text-align:left;margin-bottom:14px;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--header)">
+        <strong style="display:block;margin-bottom:6px">Continue offline</strong>
+        <p class="text-muted" style="font-size:12.5px;margin-bottom:10px;line-height:1.45">
+          Use this device only. Attendance, grades, and tools work without internet.
+          Sign in with Google later when you need Drive backup or sync.
+        </p>
+        <button class="btn btn-secondary" id="btn-offline-login" style="width:100%;justify-content:center">Continue offline</button>
+      </div>
+
+      <div style="text-align:left;margin-bottom:12px;padding:14px;border:1px solid var(--border);border-radius:10px">
+        <strong style="display:block;margin-bottom:6px">Sign in with Google</strong>
+        <p class="text-muted" style="font-size:12.5px;margin-bottom:10px;line-height:1.45">
+          Required before Google Drive backup and sync. La Verdad accounts only.
+        </p>
+        <div class="login-domains">
+          <strong>Allowed domains</strong><br>
+          • student.laverdad.edu.ph<br>
+          • laverdad.edu.ph
+        </div>
+        <div id="google-btn-host" style="margin-top:12px"></div>
+        <div class="login-error" id="login-error" style="color:var(--danger);font-size:13px;margin-top:8px"></div>
+      </div>
+
+      <p class="text-muted" style="font-size:11.5px;line-height:1.45">
+        <strong>Note:</strong> Backup &amp; sync need a Google sign-in first. Offline mode is fully usable for class on this device.
+      </p>
+    </div>
+  </div>
+
+  <div id="app-shell" class="hidden" style="display:contents">
   <aside id="sidebar">
     <div class="brand">
-      <div class="brand-logo">BC</div>
-      <div class="brand-text">BeepCheck Pro</div>
+      <img class="logo-expanded logo-light" src="assets/logos/logo-full-blue.png" alt="Trellica">
+      <img class="logo-expanded logo-dark" src="assets/logos/logo-full-white.png" alt="Trellica" style="display:none">
+      <img class="logo-collapsed logo-light" src="assets/logos/logo-h-blue.png" alt="Trellica">
+      <img class="logo-collapsed logo-dark" src="assets/logos/logo-h-white.png" alt="Trellica" style="display:none">
     </div>
     <nav class="nav">
-      <button class="nav-btn active" data-route="dashboard"><span class="icon">⌂</span><span class="label">Dashboard</span></button>
-      <button class="nav-btn" data-route="students"><span class="icon">👥</span><span class="label">Students</span></button>
-      <button class="nav-btn" data-route="subjects"><span class="icon">📚</span><span class="label">Subjects</span></button>
-      <button class="nav-btn" data-route="attendance"><span class="icon">✓</span><span class="label">Attendance</span></button>
-      <button class="nav-btn" data-route="gradebook"><span class="icon">📊</span><span class="label">Gradebook</span></button>
-      <button class="nav-btn" data-route="recitation"><span class="icon">🦆</span><span class="label">Recitation</span></button>
-      <button class="nav-btn" data-route="seating"><span class="icon">▦</span><span class="label">Seating</span></button>
-      <button class="nav-btn" data-route="grouper"><span class="icon">⬡</span><span class="label">Grouper</span></button>
-      <button class="nav-btn" data-route="peer"><span class="icon">◎</span><span class="label">Peer Eval</span></button>
-      <button class="nav-btn" data-route="calendar"><span class="icon">📅</span><span class="label">Calendar</span></button>
-      <button class="nav-btn" data-route="todo"><span class="icon">☑</span><span class="label">To-Do</span></button>
-      <button class="nav-btn" data-route="behavior"><span class="icon">✎</span><span class="label">Behavior</span></button>
-      <button class="nav-btn" data-route="sticky"><span class="icon">📌</span><span class="label">Sticky Notes</span></button>
-      <button class="nav-btn" data-route="reminders"><span class="icon">🔔</span><span class="label">Reminders</span></button>
-      <button class="nav-btn" data-route="qr"><span class="icon">▣</span><span class="label">QR Codes</span></button>
-      <button class="nav-btn" data-route="sync"><span class="icon">☁</span><span class="label">Data & Sync</span></button>
+      <div class="nav-section">
+        <button class="nav-btn active" data-route="dashboard"><span class="icon">⌂</span><span class="label">Dashboard</span></button>
+      </div>
+      <div class="nav-section">
+        <button class="nav-btn" data-route="attendance"><span class="icon">✓</span><span class="label">Attendance</span></button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Records Management</div>
+        <button class="nav-btn" data-route="students"><span class="icon">👥</span><span class="label">Student Records</span></button>
+        <button class="nav-btn" data-route="subjects"><span class="icon">📚</span><span class="label">Subject Management</span></button>
+        <button class="nav-btn" data-route="enrollment"><span class="icon">🔗</span><span class="label">Enrollment</span></button>
+        <button class="nav-btn" data-route="gradebook"><span class="icon">📊</span><span class="label">Gradebook</span></button>
+        <button class="nav-btn" data-route="officers"><span class="icon">★</span><span class="label">Class Officers</span></button>
+        <button class="nav-btn" data-route="viewgrades"><span class="icon">📑</span><span class="label">Individual Grades</span></button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">Tools</div>
+        <button class="nav-btn" data-route="recitation"><span class="icon">🦆</span><span class="label">Random / Recitation</span></button>
+        <button class="nav-btn" data-route="grouper"><span class="icon">⬡</span><span class="label">Group Maker</span></button>
+        <button class="nav-btn" data-route="seating"><span class="icon">▦</span><span class="label">Seating Plan</span></button>
+        <button class="nav-btn" data-route="project"><span class="icon">📁</span><span class="label">Group Project Tracker</span></button>
+        <button class="nav-btn" data-route="timer"><span class="icon">⏱</span><span class="label">Classroom Timer</span></button>
+        <button class="nav-btn" data-route="present"><span class="icon">🖥</span><span class="label">Presentation</span></button>
+        <button class="nav-btn" data-route="peer"><span class="icon">◎</span><span class="label">Peer Evaluation</span></button>
+        <button class="nav-btn" data-route="qr"><span class="icon">▣</span><span class="label">QR Codes</span></button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">More</div>
+        <button class="nav-btn" data-route="behavior"><span class="icon">✎</span><span class="label">Behavior</span></button>
+        <button class="nav-btn" data-route="sticky"><span class="icon">📌</span><span class="label">Sticky Notes</span></button>
+        <button class="nav-btn" data-route="reminders"><span class="icon">🔔</span><span class="label">Reminders</span></button>
+        <button class="nav-btn" data-route="sync"><span class="icon">☁</span><span class="label">Data & Sync</span></button>
+      </div>
     </nav>
     <div class="sidebar-footer">
+      <div class="user-chip" id="user-chip">
+        <img alt="" style="display:none">
+        <div class="meta">
+          <strong>—</strong>
+          <span class="email"></span>
+        </div>
+      </div>
       <div class="sync-status">
         <span class="sync-dot offline" id="sync-dot"></span>
         <span id="sync-label">Checking…</span>
       </div>
-      <button class="btn-icon" id="btn-collapse" title="Collapse menu" style="color:var(--text-on-dark)">⇄</button>
+      <div class="flex" style="gap:4px;justify-content:space-between">
+        <button class="btn-icon" id="btn-theme" title="Toggle theme">◐</button>
+        <button class="btn-icon" id="btn-collapse" title="Collapse menu">⇄</button>
+        <button class="btn-icon" id="btn-signout" title="Sign out">⎋</button>
+      </div>
     </div>
   </aside>
 
@@ -55,10 +128,12 @@
     </header>
     <main id="content"></main>
   </div>
+  </div>
 
   <div id="toasts"></div>
 
   <script src="js/db.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/sync.js"></script>
   <script src="js/modules/students.js"></script>
   <script src="js/modules/subjects.js"></script>
@@ -74,13 +149,17 @@
   <script src="js/modules/sticky.js"></script>
   <script src="js/modules/reminders.js"></script>
   <script src="js/modules/qr.js"></script>
+  <script src="js/modules/timer.js"></script>
+  <script src="js/modules/officers.js"></script>
+  <script src="js/modules/viewgrades.js"></script>
+  <script src="js/modules/present.js"></script>
+  <script src="js/modules/project.js"></script>
   <script src="js/app.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-
   <style>
-    @media (max-width: 768px) {
-      #btn-menu { display: flex !important; }
-    }
+    @media (max-width: 900px) { #btn-menu { display: flex !important; } }
+    #app-shell.hidden { display: none !important; }
+    #app-shell:not(.hidden) { display: contents; }
   </style>
 </body>
 </html>

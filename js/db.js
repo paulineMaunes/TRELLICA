@@ -156,8 +156,27 @@ async function importAll(data, { replace = false } = {}) {
   }
 }
 
-/** Seed default grade categories if empty */
+/** Seed default grade categories + optional seed.json students/subjects */
 async function ensureDefaults() {
+  // One-time seed from /data/seed.json when students empty
+  const existingStudents = await getAll('students');
+  if (existingStudents.length === 0) {
+    try {
+      const res = await fetch('./data/seed.json', { cache: 'no-store' });
+      if (res.ok) {
+        const seed = await res.json();
+        for (const key of ['students', 'subjects', 'enrollments', 'schedules', 'calendarEvents']) {
+          if (Array.isArray(seed[key]) && seed[key].length) {
+            await putMany(key, seed[key]);
+          }
+        }
+        console.log('Seeded from data/seed.json');
+      }
+    } catch (e) {
+      console.warn('Seed load skipped', e);
+    }
+  }
+
   const cats = await getAll('categories');
   if (cats.length === 0) {
     const defaults = [
@@ -180,6 +199,30 @@ async function ensureDefaults() {
   const settings = await getAll('settings');
   if (settings.length === 0) {
     await put('settings', { id: 1, key: 'app', passcode: '1234', lastSync: null, driveFolderId: null });
+  }
+
+  // Seed students from bundled CSV-derived JSON (once)
+  const existingStudents = await getAll('students');
+  if (existingStudents.length === 0) {
+    try {
+      const res = await fetch('./data/students-seed.json');
+      if (res.ok) {
+        const list = await res.json();
+        await putMany('students', list);
+      }
+    } catch (e) { console.warn('student seed', e); }
+  }
+
+  // Seed subjects
+  const existingSubjects = await getAll('subjects');
+  if (existingSubjects.length === 0) {
+    try {
+      const res = await fetch('./data/subjects-seed.json');
+      if (res.ok) {
+        const list = await res.json();
+        await putMany('subjects', list);
+      }
+    } catch (e) { console.warn('subject seed', e); }
   }
 }
 

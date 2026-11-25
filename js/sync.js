@@ -181,7 +181,7 @@ const Sync = (() => {
       <div class="card">
         <div class="card-title">Data & Sync</div>
         <p class="text-muted" style="margin-bottom:16px">
-          All data is stored offline in this browser (IndexedDB). Use export/import or Google Drive to back up and move data between devices.
+          Data is stored offline (IndexedDB) for this browser profile. Connect Google Drive to back up and restore all settings and configuration for the signed-in account. JSON export/import remains available as a fallback.
         </p>
         <div class="flex flex-wrap" style="margin-bottom:20px">
           <button class="btn btn-primary" id="sync-export">⬇ Export JSON backup</button>
@@ -218,7 +218,13 @@ const Sync = (() => {
       if (f) importJson(f);
       e.target.value = '';
     });
-    container.querySelector('#sync-gconnect').addEventListener('click', connectDrive);
+    container.querySelector('#sync-gconnect').addEventListener('click', () => {
+      if (window.Auth && Auth.isGoogleUser && !Auth.isGoogleUser()) {
+        toast('Sign in with Google first (not offline mode) to use Drive sync', 'error');
+        return;
+      }
+      connectDrive();
+    });
     container.querySelector('#sync-gupload').addEventListener('click', uploadToDrive);
     container.querySelector('#sync-gdownload').addEventListener('click', downloadLatestFromDrive);
   }

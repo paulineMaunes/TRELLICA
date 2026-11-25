@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "code": "DSA",
+    "name": "Data Structures & Algorithms",
+    "semester": "1st",
+    "academicYear": "2026-2027",
+    "classSet": "All",
+    "isActive": true
+  },
+  {
+    "id": 2,
+    "code": "PROG",
+    "name": "Programming",
+    "semester": "1st",
+    "academicYear": "2026-2027",
+    "classSet": "All",
+    "isActive": true
+  },
+  {
+    "id": 3,
+    "code": "DB",
+    "name": "Database Systems",
+    "semester": "1st",
+    "academicYear": "2026-2027",
+    "classSet": "All",
+    "isActive": true
+  },
+  {
+    "id": 4,
+    "code": "WEB",
+    "name": "Web Development",
+    "semester": "1st",
+    "academicYear": "2026-2027",
+    "classSet": "All",
+    "isActive": true
+  },
+  {
+    "id": 5,
+    "code": "NET",
+    "name": "Networking",
+    "semester": "1st",
+    "academicYear": "2026-2027",
+    "classSet": "All",
+    "isActive": true
+  }
+]

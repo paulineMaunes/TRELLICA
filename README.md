@@ -1,58 +1,45 @@
-# BeepCheck Pro PWA
+# Trellica · BeepCheck Pro PWA
 
-Offline-first Progressive Web App version of BeepCheck Pro.
+Offline-first classroom app with Google institutional login, light/dark themes, and Drive backup.
 
-**Stack:** Vanilla JS + modern CSS · IndexedDB · Service Worker · optional Google Drive
+## Sign-in
 
-## Modules
+- Google accounts only from **student.laverdad.edu.ph** or **laverdad.edu.ph** (extra domains can be stored later in settings).
+- Set `window.BEEPCHECK_GOOGLE_CLIENT_ID` in `index.html` for production Sign-In + Drive.
+- Without a Client ID, use **Continue (demo)** for local testing.
 
-| Module | Features |
-|--------|----------|
-| Students + Enrollment | Full profile CRUD, NFC/ID, hard-delete with enrollments |
-| Subjects + Schedules | Semester, year, class set, weekly time slots |
-| Attendance | Present / Late / Absent / Excuse · bulk mark |
-| Gradebook | Weighted categories (desktop defaults) · Midterm/Finals |
-| Recitation | Pool · random pick · Duck Race · points |
-| Seating Chart | Custom grid · assign / free seats · save per subject |
-| Grouper | Random groups · optional leaders · save/load sets |
-| Peer Evaluation | Sessions · 8-criteria ratings · results averages |
-| Calendar | Month view · academic events CRUD |
-| To-Do | Priority · due dates · complete |
-| Behavior | Positive / Neutral / Concern log per student |
-| Sticky Notes | Color board · auto-save |
-| Reminders | Due datetime · overdue highlight |
-| QR Codes | Student payload QR · session codes |
-| Data & Sync | JSON export/import · optional Google Drive |
+## Themes (Trellica palette)
 
-## Deploy to GitHub Pages
+| Token | Light | Dark |
+|-------|-------|------|
+| Brand | #2563EB | #2563EB |
+| Accent | #1D4ED8 | #38BDF8 |
+| Background | #F8FAFC | #0B1120 |
+| Card | #FFFFFF | #162032 |
+| Text | #0F172A | #F1F5F9 |
 
-1. Upload the **contents** of this folder to a GitHub repo.
-2. **Settings → Pages** → branch `main`, folder `/`.
-3. Open `https://YOUR_USERNAME.github.io/REPO_NAME/`.
+Toggle via ◐ in the sidebar. Logos switch automatically:
 
-Install via browser “Install app” / “Add to Home Screen” for offline use.
+- **Expanded:** full BLUE (light) / full WHITE (dark)
+- **Collapsed:** horizontal BLUE (light) / horizontal WHITE (dark)
 
-## Local test
+Collapsed sidebar hides the scrollbar.
 
-```bash
-python -m http.server 8080
-# or: npx serve .
-```
+## Default data
 
-Open `http://localhost:8080` (not `file://`).
+On first run (empty students store), the app loads `data/seed.json` built from:
 
-## Google Drive (optional)
+- UPDATED STUDENT LIST - 11212026.csv (69 students)
+- BeepCheckPro backup subjects, enrollments, calendar events
 
-Set in `index.html`:
+## Navigation
 
-```js
-window.BEEPCHECK_GOOGLE_CLIENT_ID = 'YOUR_ID.apps.googleusercontent.com';
-```
+1. **Dashboard** — calendar, today’s events, upcoming, to-do  
+2. **Attendance**  
+3. **Records Management** — students, subjects, enrollment, gradebook, class officers, individual grades  
+4. **Tools** — recitation/duck race, grouper, seating, project tracker, classroom timer, presentation embed, peer eval, QR  
+5. **Data & Sync** — JSON + Google Drive backup/restore for the signed-in account  
 
-OAuth client type: **Web application**. Add your Pages origin to Authorized JavaScript origins.
+## Deploy
 
-## Notes
-
-- Data lives in browser IndexedDB until you export or upload to Drive.
-- Clearing site data wipes local records — keep backups.
-- DB version 2 adds stores for new modules; existing data is preserved on upgrade.
+Upload folder contents to GitHub Pages. Use HTTPS. Hard-refresh after deploy so service worker `beepcheck-v3` activates.
