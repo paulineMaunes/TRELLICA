@@ -3,7 +3,7 @@
  * Stores: students, subjects, enrollments, schedules, attendance, categories, grades, recitation, settings, syncQueue
  */
 const DB_NAME = 'BeepCheckPro';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 const STORES = [
   'students',
@@ -24,7 +24,8 @@ const STORES = [
   'peerRatings',
   'behavior',
   'stickyNotes',
-  'reminders'
+  'reminders',
+  'meta'
 ];
 
 let _db = null;
@@ -158,23 +159,52 @@ async function importAll(data, { replace = false } = {}) {
 
 /** Seed default grade categories + optional seed.json students/subjects */
 async function ensureDefaults() {
-  // One-time seed from /data/seed.json when students empty
+  // NEVER wipe user data on app updates.
+  // Seed bundled roster/subjects only when the students store is empty
+  // AND we have not already recorded a successful seed in meta.
+  let meta = null;
+  try { meta = await getById('meta', 1); } catch (_) {}
+  if (!meta) meta = { id: 1 };
+
   const existingStudents = await getAll('students');
-  if (existingStudents.length === 0) {
+  if (existingStudents.length === 0 && !meta.seedCompleted) {
     try {
       const res = await fetch('./data/seed.json', { cache: 'no-store' });
       if (res.ok) {
         const seed = await res.json();
         for (const key of ['students', 'subjects', 'enrollments', 'schedules', 'calendarEvents']) {
           if (Array.isArray(seed[key]) && seed[key].length) {
-            await putMany(key, seed[key]);
+            const cur = await getAll(key);
+            if (cur.length === 0) await putMany(key, seed[key]);
           }
         }
+        meta.seedCompleted = true;
+        meta.seededAt = new Date().toISOString();
         console.log('Seeded from data/seed.json');
       }
     } catch (e) {
       console.warn('Seed load skipped', e);
     }
+  }
+
+  // Fallback separate seed files only if still empty
+  if ((await getAll('students')).length === 0) {
+    try {
+      const res = await fetch('./data/students-seed.json', { cache: 'no-store' });
+      if (res.ok) {
+        const list = await res.json();
+        if (Array.isArray(list) && list.length) await putMany('students', list);
+      }
+    } catch (e) { console.warn('student seed', e); }
+  }
+  if ((await getAll('subjects')).length === 0) {
+    try {
+      const res = await fetch('./data/subjects-seed.json', { cache: 'no-store' });
+      if (res.ok) {
+        const list = await res.json();
+        if (Array.isArray(list) && list.length) await putMany('subjects', list);
+      }
+    } catch (e) { console.warn('subject seed', e); }
   }
 
   const cats = await getAll('categories');
@@ -198,32 +228,16 @@ async function ensureDefaults() {
 
   const settings = await getAll('settings');
   if (settings.length === 0) {
-    await put('settings', { id: 1, key: 'app', passcode: '1234', lastSync: null, driveFolderId: null });
+    await put('settings', { id: 1, key: 'app', passcode: '1234', lastSync: null, driveFolderId: null, allowedDomains: ['student.laverdad.edu.ph', 'laverdad.edu.ph'] });
   }
 
-  // Seed students from bundled CSV-derived JSON (once)
-  const existingStudents = await getAll('students');
-  if (existingStudents.length === 0) {
-    try {
-      const res = await fetch('./data/students-seed.json');
-      if (res.ok) {
-        const list = await res.json();
-        await putMany('students', list);
-      }
-    } catch (e) { console.warn('student seed', e); }
+  // Track last running app version (does not delete data)
+  if (window.TRELLICA_BUILD) {
+    meta.lastAppVersion = window.TRELLICA_BUILD.version;
+    meta.lastBuild = window.TRELLICA_BUILD.build;
   }
-
-  // Seed subjects
-  const existingSubjects = await getAll('subjects');
-  if (existingSubjects.length === 0) {
-    try {
-      const res = await fetch('./data/subjects-seed.json');
-      if (res.ok) {
-        const list = await res.json();
-        await putMany('subjects', list);
-      }
-    } catch (e) { console.warn('subject seed', e); }
-  }
+  meta.updatedAt = new Date().toISOString();
+  await put('meta', meta);
 }
 
 window.BCDB = {

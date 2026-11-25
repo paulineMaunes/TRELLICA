@@ -35,16 +35,24 @@ const App = (() => {
     subjects: { title: 'Subject Management', render: (el) => SubjectsModule.render(el) },
     enrollment: { title: 'Enrollment', render: renderEnrollmentHub },
     gradebook: { title: 'Gradebook', render: (el) => GradebookModule.render(el) },
-    officers: { title: 'Class Officers', render: renderOfficers },
-    indivgrades: { title: 'Individual Grades', render: renderIndivGrades },
+    officers: { title: 'Class Officers', render: (el) => (window.OfficersModule ? OfficersModule.render(el) : renderOfficers(el)) },
+    viewgrades: { title: 'Individual Grades', render: (el) => (window.ViewGradesModule ? ViewGradesModule.render(el) : renderIndivGrades(el)) },
+    indivgrades: { title: 'Individual Grades', render: (el) => (window.ViewGradesModule ? ViewGradesModule.render(el) : renderIndivGrades(el)) },
     picker: { title: 'Random Picker', render: (el) => RecitationModule.render(el) },
     recitation: { title: 'Recitation', render: (el) => RecitationModule.render(el) },
     grouper: { title: 'Group Maker', render: (el) => GrouperModule.render(el) },
     seating: { title: 'Seating Plan', render: (el) => SeatingModule.render(el) },
-    projects: { title: 'Group Project Tracker', render: renderProjects },
+    project: { title: 'Group Project Tracker', render: (el) => (window.ProjectModule ? ProjectModule.render(el) : renderProjects(el)) },
+    projects: { title: 'Group Project Tracker', render: (el) => (window.ProjectModule ? ProjectModule.render(el) : renderProjects(el)) },
     timer: { title: 'Classroom Timer', render: (el) => TimerModule.render(el) },
-    present: { title: 'Presentation', render: renderPresent },
+    present: { title: 'Presentation', render: (el) => (window.PresentModule ? PresentModule.render(el) : renderPresent(el)) },
     peer: { title: 'Peer Evaluation', render: (el) => PeerModule.render(el) },
+    qr: { title: 'QR Codes', render: (el) => QrModule.render(el) },
+    behavior: { title: 'Behavior', render: (el) => BehaviorModule.render(el) },
+    sticky: { title: 'Sticky Notes', render: (el) => StickyModule.render(el) },
+    reminders: { title: 'Reminders', render: (el) => RemindersModule.render(el) },
+    calendar: { title: 'Calendar', render: (el) => CalendarModule.render(el) },
+    todo: { title: 'To-Do', render: (el) => TodoModule.render(el) },
     sync: { title: 'Data & Sync', render: (el) => Sync.renderSyncPanel(el) }
   };
 
@@ -53,6 +61,7 @@ const App = (() => {
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('trellica_theme', theme);
+    localStorage.setItem('beepcheck_theme', theme);
     const loginLogo = document.getElementById('login-logo');
     if (loginLogo) {
       loginLogo.src = theme === 'dark'
@@ -133,32 +142,52 @@ const App = (() => {
 
   async function bootApp() {
     showApp();
-    await BCDB.openDB();
-    await BCDB.ensureDefaults();
-    Sync.updateStatus();
-    if (window.google) Sync.initGoogle();
-    navigate(location.hash.replace('#', '') || 'dashboard');
+    try {
+      await BCDB.openDB();
+      await BCDB.ensureDefaults();
+    } catch (e) {
+      console.error('DB init', e);
+      toast('Storage init issue — trying to continue', 'error');
+    }
+    try { Sync.updateStatus(); } catch (_) {}
+    try { if (window.google) Sync.initGoogle(); } catch (_) {}
+    try { if (window.TrellicaFirebase) await TrellicaFirebase.init(); } catch (e) { console.warn(e); }
+    const start = (location.hash || '').replace('#', '') || 'dashboard';
+    await navigate(start);
     window.addEventListener('hashchange', () => {
-      navigate(location.hash.replace('#', '') || 'dashboard');
+      navigate((location.hash || '').replace('#', '') || 'dashboard');
     });
   }
 
-  function navigate(route) {
+  async function navigate(route) {
     if (!routes[route]) route = 'dashboard';
     current = route;
-    location.hash = route;
+    try {
+      if (location.hash.replace('#', '') !== route) location.hash = route;
+    } catch (_) {}
     document.querySelectorAll('.nav-btn[data-route]').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.route === route);
     });
-    // open parent group if needed
     document.querySelectorAll('.nav-group').forEach((g) => {
       if (g.querySelector(`[data-route="${route}"]`)) g.classList.add('open');
     });
-    document.getElementById('page-title').textContent = routes[route].title;
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) titleEl.textContent = routes[route].title;
     const content = document.getElementById('content');
+    if (!content) return;
     content.innerHTML = '<p class="text-muted">Loading…</p>';
-    routes[route].render(content);
+    try {
+      await Promise.resolve(routes[route].render(content));
+    } catch (err) {
+      console.error('Render failed:', route, err);
+      content.innerHTML = '<div class="card"><p class="text-muted">Could not load this screen.</p><pre style="font-size:12px;white-space:pre-wrap;color:var(--danger)">' +
+        escapeHtml(String(err && err.message ? err.message : err)) + '</pre><button class="btn btn-secondary" id="retry-nav">Back to Dashboard</button></div>';
+      content.querySelector('#retry-nav')?.addEventListener('click', () => navigate('dashboard'));
+    }
     document.getElementById('sidebar')?.classList.remove('open');
+    // show build version in footer chip if present
+    const bv = document.getElementById('build-version');
+    if (bv && window.TRELLICA_BUILD) bv.textContent = window.TRELLICA_BUILD.label;
   }
 
   function reload() { navigate(current); }
