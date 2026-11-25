@@ -26,23 +26,11 @@
   <div id="login-screen">
     <div class="login-card">
       <img class="login-logo" id="login-logo" src="assets/logos/logo-full-blue.png" alt="Trellica">
-      <h1>Welcome to Trellica</h1>
-      <p>Choose how you want to use the app on this device.</p>
+      <h1>Sign in to Trellica</h1>
+      <p>Use your La Verdad Google account. Backup and sync require online sign-in.</p>
 
-      <div style="text-align:left;margin-bottom:14px;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--header)">
-        <strong style="display:block;margin-bottom:6px">Continue offline</strong>
-        <p class="text-muted" style="font-size:12.5px;margin-bottom:10px;line-height:1.45">
-          Use this device only. Attendance, grades, and tools work without internet.
-          Sign in with Google later when you need Drive backup or sync.
-        </p>
-        <button class="btn btn-secondary" id="btn-offline-login" style="width:100%;justify-content:center">Continue offline</button>
-      </div>
-
-      <div style="text-align:left;margin-bottom:12px;padding:14px;border:1px solid var(--border);border-radius:10px">
-        <strong style="display:block;margin-bottom:6px">Sign in with Google</strong>
-        <p class="text-muted" style="font-size:12.5px;margin-bottom:10px;line-height:1.45">
-          Required before Google Drive backup and sync. La Verdad accounts only.
-        </p>
+      <div style="text-align:left;margin-bottom:14px;padding:14px;border:1px solid var(--border);border-radius:10px">
+        <strong style="display:block;margin-bottom:6px">Google sign-in (required)</strong>
         <div class="login-domains">
           <strong>Allowed domains</strong><br>
           • student.laverdad.edu.ph<br>
@@ -52,9 +40,13 @@
         <div class="login-error" id="login-error" style="color:var(--danger);font-size:13px;margin-top:8px"></div>
       </div>
 
-      <p class="text-muted" style="font-size:11.5px;line-height:1.45">
-        <strong>Note:</strong> Backup &amp; sync need a Google sign-in first. Offline mode is fully usable for class on this device.
-      </p>
+      <details style="text-align:left;margin-top:8px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--header)">
+        <summary style="cursor:pointer;font-weight:600;font-size:13px">Can't connect? Continue offline (limited)</summary>
+        <p class="text-muted" style="font-size:12.5px;margin:10px 0;line-height:1.45">
+          Offline mode keeps data on this device only. Drive backup and multi-device sync are unavailable until you sign in with Google.
+        </p>
+        <button class="btn btn-secondary" id="btn-offline-login" style="width:100%;justify-content:center">Continue offline</button>
+      </details>
     </div>
   </div>
 
@@ -78,6 +70,7 @@
         <button class="nav-btn" data-route="behavior" title="Behavior"><span class="icon">✎</span><span class="label">Behavior</span></button>
         <button class="nav-btn" data-route="sticky" title="Sticky Notes"><span class="icon">📌</span><span class="label">Sticky Notes</span></button>
         <button class="nav-btn" data-route="reminders" title="Reminders"><span class="icon">🔔</span><span class="label">Reminders</span></button>
+        <button class="nav-btn" data-route="sync" title="Data & Sync"><span class="icon">☁</span><span class="label">Data & Sync</span></button>
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -93,20 +86,7 @@
         <span class="sync-dot offline" id="sync-dot"></span>
         <span id="sync-label">Checking…</span>
       </div>
-      <div class="sys-menu-wrap">
-        <button type="button" class="sys-menu-btn" id="btn-sys-menu" title="System menu">
-          <span>☰</span>
-          <span class="sys-label">Trellica</span>
-          <span style="margin-left:auto;opacity:.6">▴</span>
-        </button>
-        <div class="sys-popover" id="sys-popover">
-          <button type="button" data-sys="sync">☁ Data &amp; Sync</button>
-          <button type="button" data-sys="theme">◐ Toggle theme</button>
-          <button type="button" data-sys="restart">↺ Restart</button>
-          <button type="button" data-sys="lock">⎋ Sign out</button>
-        </div>
-      </div>
-      <div class="flex" style="gap:4px;justify-content:space-between;margin-top:6px">
+      <div class="flex" style="gap:4px;justify-content:space-between">
         <button class="btn-icon" id="btn-theme" title="Toggle theme">◐</button>
         <button class="btn-icon" id="btn-collapse" title="Collapse menu">⇄</button>
         <button class="btn-icon" id="btn-signout" title="Sign out">⎋</button>

@@ -128,10 +128,9 @@ const Auth = (() => {
     if (!clientId) {
       host.innerHTML = `
         <p class="text-muted" style="font-size:13px;margin-bottom:12px;text-align:left">
-          Set <code>window.BEEPCHECK_GOOGLE_CLIENT_ID</code> in index.html to enable Google Sign-In.
-          For local demo you can continue as instructor:
+          Google Client ID missing. For local testing only, continue as a domain-allowed demo user:
         </p>
-        <button class="btn btn-primary w-full" id="demo-login">Continue (demo · laverdad.edu.ph)</button>
+        <button class="btn btn-primary w-full" id="demo-login">Sign in as instructor@laverdad.edu.ph (demo)</button>
       `;
       document.getElementById('demo-login')?.addEventListener('click', async () => {
         saveUser({

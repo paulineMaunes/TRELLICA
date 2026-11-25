@@ -1,4 +1,4 @@
-const CACHE = 'trellica-v6';
+const CACHE = 'trellica-v7';
 const ASSETS = [
   './','./index.html','./manifest.json','./css/app.css',
   './js/db.js','./js/auth.js','./js/sync.js','./js/version.js', './js/app.js',
