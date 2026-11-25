@@ -30,6 +30,7 @@ const Auth = (() => {
   }
 
   async function isAllowedEmail(email) {
+    if (window.Roles) return Roles.isAllowedEmail(email);
     const domains = await allowedDomains();
     const d = domainOf(email);
     return domains.some((x) => d === x || d.endsWith('.' + x));
@@ -108,12 +109,15 @@ const Auth = (() => {
       }
       return;
     }
+    const email = (payload.email || '').toLowerCase();
+    const role = window.Roles ? await Roles.roleOf(email) : 'instructor';
     saveUser({
-      email: payload.email,
-      name: payload.name || payload.email,
+      email,
+      name: payload.name || email,
       picture: payload.picture || '',
       sub: payload.sub,
       mode: 'google',
+      role: role || 'instructor',
       signedInAt: new Date().toISOString()
     });
     showApp();
@@ -203,6 +207,7 @@ const Auth = (() => {
       picture: '',
       sub: 'offline',
       mode: 'offline',
+      role: 'instructor',
       signedInAt: new Date().toISOString()
     });
     showApp();
@@ -217,23 +222,23 @@ const Auth = (() => {
   // Compatibility aliases used by app.js
   function getUser() { return currentUser(); }
   function logout() { signOut(); }
-  function demoLogin(email) {
+  async function demoLogin(email) {
     email = (email || '').trim().toLowerCase();
     if (!email) return false;
-    // sync check using defaults if DB not ready
-    const d = domainOf(email);
-    const ok = DEFAULT_DOMAINS.some((x) => d === x || d.endsWith('.' + x));
+    const ok = window.Roles ? Roles.isAllowedEmail(email) : DEFAULT_DOMAINS.some((x) => domainOf(email) === x);
     if (!ok) {
       const errEl = document.getElementById('login-error');
-      if (errEl) errEl.textContent = 'Domain not allowed: ' + d;
+      if (errEl) errEl.textContent = 'Email not allowed: ' + email;
       return false;
     }
+    const role = window.Roles ? await Roles.roleOf(email) : 'instructor';
     saveUser({
       email,
       name: email.split('@')[0],
       picture: '',
       sub: 'demo-' + email,
       mode: 'google',
+      role: role || 'instructor',
       signedInAt: new Date().toISOString()
     });
     showApp();
@@ -254,6 +259,10 @@ const Auth = (() => {
     allowedDomains,
     isAllowedEmail,
     DEFAULT_DOMAINS,
+    getRole() {
+      const u = currentUser();
+      return (u && u.role) || null;
+    },
     get CLIENT_ID() { return getClientId(); }
   };
 })();

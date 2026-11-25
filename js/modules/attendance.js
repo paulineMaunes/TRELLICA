@@ -3,6 +3,30 @@
  * Statuses: Present, Late, Absent, Excuse
  */
 const AttendanceModule = (() => {
+
+  async function enrolledStudentIds(subjectId) {
+    const enrollments = await BCDB.getAll('enrollments');
+    return new Set(
+      enrollments
+        .filter((e) => String(e.subjectId) === String(subjectId) && e.isActive !== false)
+        .map((e) => e.studentId)
+    );
+  }
+
+  async function previousMeetingIssue(studentId, subjectId, classDate) {
+    const rows = await BCDB.getAll('attendance');
+    const prior = rows
+      .filter((a) => a.studentId === studentId && String(a.subjectId) === String(subjectId) && a.classDate < classDate)
+      .sort((a, b) => (b.classDate || '').localeCompare(a.classDate || ''));
+    const last = prior[0];
+    if (!last) return null;
+    if ((last.status === 'Late' || last.status === 'Absent') && !last.excuseSubmitted && !last.instructorExcused) {
+      return last;
+    }
+    return null;
+  }
+
+
   let selectedSubjectId = null;
   let selectedDate = todayStr();
 

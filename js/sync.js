@@ -294,7 +294,32 @@ const Sync = (() => {
     container.querySelector('#sync-gdownload').addEventListener('click', downloadLatestFromDrive);
   }
 
-  window.addEventListener('online', updateStatus);
+  async function autoSyncIfNeeded() {
+    if (!navigator.onLine) return;
+    if (!(window.Auth && Auth.isGoogleUser && Auth.isGoogleUser())) return;
+    try {
+      const queue = await BCDB.getAll('syncQueue');
+      if (!queue.length) return;
+      if (!accessToken) {
+        // try silent reconnect if we had a token earlier
+        initGoogle();
+        if (!accessToken) return;
+      }
+      await uploadToDrive();
+      // clear queue after successful upload
+      for (const q of queue) {
+        try { await BCDB.delete('syncQueue', q.id); } catch (_) {}
+      }
+      updateStatus();
+    } catch (e) {
+      console.warn('autoSync', e);
+    }
+  }
+
+  window.addEventListener('online', () => {
+    updateStatus();
+    autoSyncIfNeeded();
+  });
   window.addEventListener('offline', updateStatus);
 
   return {
@@ -306,6 +331,7 @@ const Sync = (() => {
     uploadToDrive,
     downloadLatestFromDrive,
     renderSyncPanel,
-    initGoogle
+    initGoogle,
+    autoSyncIfNeeded
   };
 })();

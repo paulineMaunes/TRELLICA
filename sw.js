@@ -1,7 +1,7 @@
-const CACHE = 'trellica-v7';
+const CACHE = 'trellica-v8';
 const ASSETS = [
   './','./index.html','./manifest.json','./css/app.css',
-  './js/db.js','./js/auth.js','./js/sync.js','./js/version.js', './js/app.js',
+  './js/db.js','./js/roles.js', './js/auth.js','./js/sync.js','./js/version.js', './js/app.js',
   './js/modules/students.js','./js/modules/subjects.js','./js/modules/attendance.js',
   './js/modules/gradebook.js','./js/modules/recitation.js','./js/modules/seating.js',
   './js/modules/grouper.js','./js/modules/peer.js','./js/modules/calendar.js',

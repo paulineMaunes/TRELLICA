@@ -1,6 +1,6 @@
 /** Build version — bump on every release */
 window.TRELLICA_BUILD = {
-  version: '0.5.2',
-  build: '20261126.04',
-  label: 'v0.5.2 (20261126.04)'
+  version: '0.6.0',
+  build: '20261126.05',
+  label: 'v0.6.0 (20261126.05)'
 };

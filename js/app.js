@@ -125,7 +125,9 @@ const App = (() => {
     reminders: { title: 'Reminders', render: (el) => RemindersModule.render(el) },
     calendar: { title: 'Calendar', render: (el) => CalendarModule.render(el) },
     todo: { title: 'To-Do', render: (el) => TodoModule.render(el) },
-    sync: { title: 'Data & Sync', render: (el) => Sync.renderSyncPanel(el) }
+    sync: { title: 'Data & Sync', render: (el) => Sync.renderSyncPanel(el) },
+    adminpanel: { title: 'Superadmin Panel', render: renderAdminPanel },
+    student: { title: 'My Dashboard', render: renderStudentView }
   };
 
   let current = 'dashboard';
@@ -219,7 +221,9 @@ const App = (() => {
 
   async function bootApp() {
     showApp();
+    const user = Auth.getUser ? Auth.getUser() : Auth.currentUser();
     try {
+      if (BCDB.setActiveUser) BCDB.setActiveUser(user && user.email ? user.email : '');
       await BCDB.openDB();
       await BCDB.ensureDefaults();
     } catch (e) {
@@ -229,10 +233,37 @@ const App = (() => {
     try { Sync.updateStatus(); } catch (_) {}
     try { if (window.google) Sync.initGoogle(); } catch (_) {}
     try { if (window.TrellicaFirebase) await TrellicaFirebase.init(); } catch (e) { console.warn(e); }
-    const start = (location.hash || '').replace('#', '') || 'dashboard';
+    try { if (Sync.autoSyncIfNeeded) Sync.autoSyncIfNeeded(); } catch (_) {}
+
+    // Role-based landing: always dashboard (or student view for students)
+    const role = (user && user.role) || (window.Roles && user ? await Roles.roleOf(user.email) : null);
+    let start = 'dashboard';
+    if (role === 'student') start = 'student';
+    // force dashboard hash for staff
+    if (role !== 'student') start = 'dashboard';
+    history.replaceState(null, '', '#' + start);
     await navigate(start);
     window.addEventListener('hashchange', () => {
       navigate((location.hash || '').replace('#', '') || 'dashboard');
+    });
+    applyRoleNav(role);
+  }
+
+  function applyRoleNav(role) {
+    const staff = !role || role === 'superadmin' || role === 'admin' || role === 'instructor';
+    document.querySelectorAll('.nav-btn[data-route]').forEach((btn) => {
+      const r = btn.dataset.route;
+      if (role === 'student') {
+        // students only see student dashboard conceptually - hide staff hubs
+        const allow = r === 'student' || r === 'dashboard';
+        btn.style.display = allow ? '' : 'none';
+      } else {
+        btn.style.display = '';
+        if (r === 'adminpanel') {
+          btn.style.display = role === 'superadmin' ? '' : 'none';
+        }
+        if (r === 'student') btn.style.display = 'none';
+      }
     });
   }
 
@@ -317,7 +348,19 @@ const App = (() => {
                 </div>`).join('')}
           </div>
           <div class="card">
-            <div class="card-title"><span>Upcoming events</span></div>
+            <div class="card-title">
+              <span>Calendar · Upcoming events</span>
+            </div>
+            <div class="form-row" style="margin-bottom:12px">
+              <div class="form-group"><label>Title</label><input id="dash-ev-title" placeholder="Event title"></div>
+              <div class="form-group"><label>Date</label><input id="dash-ev-date" type="date"></div>
+              <div class="form-group"><label>Time</label><input id="dash-ev-time" type="time"></div>
+              <div class="form-group"><label>Category</label>
+                <select id="dash-ev-cat"><option>Class</option><option>Holiday</option><option>Exam</option><option>Meeting</option><option>Other</option></select>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm" id="dash-add-event" type="button">+ Add event</button>
+            <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
             ${upcoming.length === 0
               ? '<p class="text-muted">No upcoming events. Add some from Calendar tools later.</p>'
               : upcoming.map((e) => `
@@ -358,6 +401,22 @@ const App = (() => {
     `;
     container.querySelectorAll('[data-go]').forEach((btn) => {
       btn.addEventListener('click', () => navigate(btn.dataset.go));
+    });
+    const dateInput = container.querySelector('#dash-ev-date');
+    if (dateInput && !dateInput.value) dateInput.value = today;
+    container.querySelector('#dash-add-event')?.addEventListener('click', async () => {
+      const title = container.querySelector('#dash-ev-title')?.value?.trim();
+      const eventDate = container.querySelector('#dash-ev-date')?.value;
+      const startTime = container.querySelector('#dash-ev-time')?.value || '';
+      const category = container.querySelector('#dash-ev-cat')?.value || 'Other';
+      if (!title || !eventDate) { toast('Title and date required', 'error'); return; }
+      const id = await BCDB.nextId('calendarEvents');
+      await BCDB.put('calendarEvents', {
+        id, title, eventDate, startTime, category, notes: '', createdAt: new Date().toISOString()
+      });
+      if (window.Sync) Sync.queueChange('calendarEvents', { id });
+      toast('Event added', 'success');
+      renderDashboard(container);
     });
     container.querySelectorAll('.dash-todo').forEach((cb) => {
       cb.addEventListener('change', async () => {
@@ -551,6 +610,133 @@ const App = (() => {
       const url = container.querySelector('#pres-url').value.trim();
       if (!url) { toast('Enter a URL', 'error'); return; }
       window.open(url, '_blank');
+    });
+  }
+
+
+
+  async function renderAdminPanel(container) {
+    const user = Auth.getUser ? Auth.getUser() : Auth.currentUser();
+    const role = user?.role || await Roles.roleOf(user?.email);
+    if (role !== 'superadmin') {
+      container.innerHTML = '<div class="card"><p>Superadmin only.</p></div>';
+      return;
+    }
+    const map = await Roles.getMembersMap();
+    const members = Object.entries(map).map(([email, r]) => ({ email, role: r }));
+    container.innerHTML = `
+      <div class="card">
+        <div class="card-title">Superadmin Panel</div>
+        <p class="text-muted" style="margin-bottom:14px">Manage roles. Superadmin: <code>${escapeHtml(Roles.SUPERADMIN)}</code></p>
+        <div class="form-row">
+          <div class="form-group"><label>Email</label><input id="adm-email" placeholder="name@laverdad.edu.ph"></div>
+          <div class="form-group"><label>Role</label>
+            <select id="adm-role">
+              <option value="admin">admin</option>
+              <option value="instructor">instructor</option>
+              <option value="student">student</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="adm-add">Add / update member</button>
+        <table class="data-table mt-16">
+          <thead><tr><th>Email</th><th>Role</th><th></th></tr></thead>
+          <tbody>
+            ${members.map((m) => `
+              <tr>
+                <td>${escapeHtml(m.email)}</td>
+                <td><span class="badge badge-active">${escapeHtml(m.role)}</span></td>
+                <td>${m.email === Roles.SUPERADMIN ? '—' : `<button class="btn btn-sm btn-secondary adm-rm" data-email="${escapeAttr(m.email)}">Remove</button>`}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    container.querySelector('#adm-add')?.addEventListener('click', async () => {
+      try {
+        await Roles.addMember(container.querySelector('#adm-email').value, container.querySelector('#adm-role').value);
+        toast('Member saved', 'success');
+        renderAdminPanel(container);
+      } catch (e) { toast(e.message || String(e), 'error'); }
+    });
+    container.querySelectorAll('.adm-rm').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Remove ' + btn.dataset.email + '?')) return;
+        await Roles.removeMember(btn.dataset.email);
+        renderAdminPanel(container);
+      });
+    });
+  }
+
+  async function renderStudentView(container) {
+    const user = Auth.getUser ? Auth.getUser() : Auth.currentUser();
+    const email = (user?.email || '').toLowerCase();
+    const students = await BCDB.getAll('students');
+    const me = students.find((s) => (s.email || '').toLowerCase() === email || (s.alternateEmail || '').toLowerCase() === email);
+    const events = (await BCDB.getAll('calendarEvents')).sort((a, b) => (a.eventDate || '').localeCompare(b.eventDate || ''));
+    const today = new Date().toISOString().slice(0, 10);
+    const upcoming = events.filter((e) => e.eventDate >= today).slice(0, 10);
+    const attendance = await BCDB.getAll('attendance');
+    const myAtt = me ? attendance.filter((a) => a.studentId === me.id || a.studentNumber === me.studentNumber) : [];
+    const needsExcuse = myAtt.filter((a) => (a.status === 'Late' || a.status === 'Absent') && !a.excuseSubmitted);
+    const grades = await BCDB.getAll('grades');
+    const myGrades = me ? grades.filter((g) => g.studentId === me.id) : [];
+
+    container.innerHTML = `
+      <div class="stat-row">
+        <div class="stat-card"><div class="label">Role</div><div class="value" style="font-size:16px">Student</div></div>
+        <div class="stat-card"><div class="label">Attendance flags</div><div class="value tabular-nums">${needsExcuse.length}</div></div>
+        <div class="stat-card"><div class="label">Grade records</div><div class="value tabular-nums">${myGrades.length}</div></div>
+      </div>
+      ${needsExcuse.length ? `
+        <div class="card" style="border-color:var(--warning)">
+          <div class="card-title">Excuse letter needed</div>
+          ${needsExcuse.slice(0, 5).map((a) => `
+            <p style="margin-bottom:8px">Hi ${escapeHtml(me?.nickname || me?.firstName || 'student')}, you were
+            <strong>${escapeHtml(a.status)}</strong> on ${escapeHtml(a.classDate || '')}.
+            Please submit an excuse letter to your instructor.</p>
+            <button class="btn btn-sm btn-primary st-excuse" data-id="${a.id}">Mark excuse letter submitted</button>
+          `).join('<hr style="margin:12px 0;border:none;border-top:1px solid var(--border)">')}
+        </div>` : ''}
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-title">Calendar</div>
+          ${upcoming.length === 0 ? '<p class="text-muted">No upcoming events.</p>' :
+            upcoming.map((e) => `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+              <strong>${escapeHtml(e.title)}</strong>
+              <div class="text-muted" style="font-size:12px">${escapeHtml(e.eventDate)} ${escapeHtml(e.startTime || '')} · ${escapeHtml(e.category || '')}</div>
+            </div>`).join('')}
+        </div>
+        <div class="card">
+          <div class="card-title">My grade standing</div>
+          ${!me ? '<p class="text-muted">No student profile linked to this email yet. Ask your instructor to register your email on your student record.</p>' :
+            myGrades.length === 0 ? '<p class="text-muted">No grades posted yet.</p>' :
+            `<table class="data-table"><thead><tr><th>Subject</th><th>Period</th><th>Score</th></tr></thead>
+            <tbody>${myGrades.slice(0, 20).map((g) => `<tr>
+              <td>${escapeHtml(String(g.subjectId || g.subject || ''))}</td>
+              <td>${escapeHtml(g.period || '')}</td>
+              <td class="tabular-nums">${escapeHtml(String(g.score ?? g.grade ?? '—'))}</td>
+            </tr>`).join('')}</tbody></table>`}
+          <div class="card-title" style="margin-top:16px">Recent attendance</div>
+          ${myAtt.length === 0 ? '<p class="text-muted">No attendance records.</p>' :
+            `<table class="data-table"><thead><tr><th>Date</th><th>Status</th><th>Excuse</th></tr></thead>
+            <tbody>${myAtt.slice(-15).reverse().map((a) => `<tr>
+              <td>${escapeHtml(a.classDate || '')}</td>
+              <td>${escapeHtml(a.status || '')}</td>
+              <td>${a.excuseSubmitted ? 'Yes' : '—'}</td>
+            </tr>`).join('')}</tbody></table>`}
+        </div>
+      </div>`;
+    container.querySelectorAll('.st-excuse').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const rec = await BCDB.getById('attendance', +btn.dataset.id);
+        if (!rec) return;
+        rec.excuseSubmitted = true;
+        rec.excuseSubmittedAt = new Date().toISOString();
+        await BCDB.put('attendance', rec);
+        if (window.Sync) Sync.queueChange('attendance', rec);
+        toast('Excuse letter marked submitted', 'success');
+        renderStudentView(container);
+      });
     });
   }
 

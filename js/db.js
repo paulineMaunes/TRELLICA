@@ -2,8 +2,21 @@
  * BeepCheck Pro — IndexedDB offline store
  * Stores: students, subjects, enrollments, schedules, attendance, categories, grades, recitation, settings, syncQueue
  */
-const DB_NAME = 'BeepCheckPro';
-const DB_VERSION = 3;
+let DB_NAME = 'Trellica_local';
+const DB_VERSION = 4;
+const GLOBAL_DB_PREFIX = 'Trellica_';
+
+function dbNameForUser(email) {
+  const e = String(email || '').trim().toLowerCase();
+  if (!e) return 'Trellica_offline';
+  // safe key
+  return GLOBAL_DB_PREFIX + e.replace(/[^a-z0-9@._-]/gi, '_');
+}
+
+function setActiveUser(email) {
+  DB_NAME = dbNameForUser(email);
+  _db = null; // force reopen
+}
 
 const STORES = [
   'students',
@@ -159,6 +172,10 @@ async function importAll(data, { replace = false } = {}) {
 
 /** Seed default grade categories + optional seed.json students/subjects */
 async function ensureDefaults() {
+  const SEED_OWNER = (window.Roles && Roles.SUPERADMIN) || 'joanepauline.maunes@laverdad.edu.ph';
+  const currentEmail = (window.Auth && (Auth.getUser && Auth.getUser() || Auth.currentUser && Auth.currentUser()) || {}).email || '';
+  const maySeedDefaults = currentEmail.toLowerCase() === SEED_OWNER.toLowerCase();
+
   // NEVER wipe user data on app updates.
   // Seed bundled roster/subjects only when the students store is empty
   // AND we have not already recorded a successful seed in meta.
@@ -167,7 +184,7 @@ async function ensureDefaults() {
   if (!meta) meta = { id: 1 };
 
   const existingStudents = await getAll('students');
-  if (existingStudents.length === 0 && !meta.seedCompleted) {
+  if (maySeedDefaults && existingStudents.length === 0 && !meta.seedCompleted) {
     try {
       const res = await fetch('./data/seed.json', { cache: 'no-store' });
       if (res.ok) {
@@ -188,7 +205,7 @@ async function ensureDefaults() {
   }
 
   // Fallback separate seed files only if still empty
-  if ((await getAll('students')).length === 0) {
+  if (maySeedDefaults && (await getAll('students')).length === 0) {
     try {
       const res = await fetch('./data/students-seed.json', { cache: 'no-store' });
       if (res.ok) {
@@ -197,7 +214,7 @@ async function ensureDefaults() {
       }
     } catch (e) { console.warn('student seed', e); }
   }
-  if ((await getAll('subjects')).length === 0) {
+  if (maySeedDefaults && (await getAll('subjects')).length === 0) {
     try {
       const res = await fetch('./data/subjects-seed.json', { cache: 'no-store' });
       if (res.ok) {
@@ -242,5 +259,5 @@ async function ensureDefaults() {
 
 window.BCDB = {
   openDB, getAll, getById, put, putMany, remove, clearStore, nextId,
-  exportAll, importAll, ensureDefaults, STORES
+  exportAll, importAll, ensureDefaults, STORES, setActiveUser, dbNameForUser
 };
