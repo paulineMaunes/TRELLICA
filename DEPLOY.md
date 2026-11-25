@@ -269,3 +269,55 @@ Open `http://localhost:8080`.
 | `data/subjects-seed.json` | Default subjects (first launch only) |
 
 For questions about Workspace-only (Internal) apps vs External testing quotas, see Google’s OAuth consent screen docs in Cloud Console help.
+
+
+---
+
+## OAuth client form — exact values to enter
+
+On **Create OAuth client ID** (Web application):
+
+### Name
+```
+TRELLICA
+```
+
+### Authorized JavaScript origins
+Click **+ Add URI** for each (no path, no trailing slash):
+
+```
+https://YOUR_GITHUB_USERNAME.github.io
+http://localhost
+http://localhost:8080
+http://127.0.0.1:8080
+```
+
+Example if your GitHub username is `jmaunes`:
+```
+https://jmaunes.github.io
+```
+
+### Authorized redirect URIs
+Click **+ Add URI** for each (include the repo path and trailing slash if you use one):
+
+```
+https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME/
+http://localhost:8080/
+http://127.0.0.1:8080/
+```
+
+Example:
+```
+https://jmaunes.github.io/trellica/
+```
+
+Leave **Use this client for an AI-powered agent** unchecked.
+
+Then **Create**, copy the Client ID into `index.html` as `window.BEEPCHECK_GOOGLE_CLIENT_ID`.
+
+### Data persistence across app updates
+
+- All student, grade, attendance, and settings data live in the browser **IndexedDB**.
+- App updates (new JS/CSS on GitHub Pages) **do not** clear IndexedDB.
+- Seed data runs **only once** when the students store is empty.
+- Always keep a **Drive or JSON backup** before clearing browser site data.
