@@ -198,11 +198,11 @@ async function loadSeedJson() {
   return null;
 }
 
-async function forceSeedIfNeeded(email) {
+async function forceSeedIfNeeded(email, { force = false } = {}) {
   const SEED_OWNER = ((window.Roles && Roles.SUPERADMIN) || 'joanepauline.maunes@laverdad.edu.ph').toLowerCase();
   if (String(email || '').toLowerCase().trim() !== SEED_OWNER) return false;
   const existing = await getAll('students');
-  if (existing.length > 0) {
+  if (existing.length > 0 && !force) {
     console.log('[Trellica seed] already has', existing.length, 'students');
     return false;
   }
@@ -212,11 +212,19 @@ async function forceSeedIfNeeded(email) {
     if (window.toast) toast('Could not load default data files', 'error');
     return false;
   }
+  if (force || existing.length === 0) {
+    try { await clearStore('students'); } catch (_) {}
+  }
   for (const key of ['students', 'subjects', 'enrollments', 'schedules', 'calendarEvents']) {
-    if (Array.isArray(seed[key]) && seed[key].length) {
+    if (!Array.isArray(seed[key]) || !seed[key].length) continue;
+    if (force) {
+      try { await clearStore(key); } catch (_) {}
       await putMany(key, seed[key]);
-      console.log('[Trellica seed] wrote', key, seed[key].length);
+    } else {
+      const cur = await getAll(key);
+      if (cur.length === 0) await putMany(key, seed[key]);
     }
+    console.log('[Trellica seed] wrote', key, seed[key].length);
   }
   try {
     await put('meta', { id: 1, seedCompleted: true, seededAt: new Date().toISOString(), lastAppVersion: (window.TRELLICA_BUILD || {}).version });

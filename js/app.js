@@ -136,6 +136,8 @@ const App = (() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('trellica_theme', theme);
     localStorage.setItem('beepcheck_theme', theme);
+    const meta = document.getElementById('meta-theme-color') || document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#0B1120' : '#2563EB');
     const loginLogo = document.getElementById('login-logo');
     if (loginLogo) {
       loginLogo.src = theme === 'dark'
@@ -340,7 +342,16 @@ const App = (() => {
     const todayEvents = events.filter((e) => e.eventDate === today);
     const upcoming = events.filter((e) => e.eventDate > today).slice(0, 6);
 
+    const isSuper = ((userEmail) => {
+      const u = (Auth.getUser && Auth.getUser()) || (Auth.currentUser && Auth.currentUser()) || {};
+      return String(u.email || '').toLowerCase() === 'joanepauline.maunes@laverdad.edu.ph';
+    })();
     container.innerHTML = `
+      ${students.length === 0 ? `<div class="card" style="margin-bottom:12px;border-color:var(--warning)">
+        <div class="card-title">No class data yet</div>
+        <p class="text-muted" style="margin-bottom:10px">Default roster was not loaded. ${isSuper ? 'Click below to load the built-in seed (69 students).' : 'Ask the superadmin to load defaults, or import a backup from Data & Sync.'}</p>
+        ${isSuper ? '<button class="btn btn-primary" id="btn-reload-seed">Load default class data</button>' : ''}
+      </div>` : ''}
       <div class="card" style="margin-bottom:16px">
         <div id="dash-cal-host" class="dash-cal-full"></div>
       </div>
@@ -411,6 +422,19 @@ const App = (() => {
     `;
     container.querySelectorAll('[data-go]').forEach((btn) => {
       btn.addEventListener('click', () => navigate(btn.dataset.go));
+    });
+    container.querySelector('#btn-reload-seed')?.addEventListener('click', async () => {
+      const u = (Auth.getUser && Auth.getUser()) || {};
+      if (BCDB.forceSeedIfNeeded) {
+        // clear students first so force runs
+        try {
+          const all = await BCDB.getAll('students');
+          for (const s of all) await BCDB.remove('students', s.id);
+        } catch (_) {}
+        await BCDB.forceSeedIfNeeded(u.email, { force: true });
+        toast('Reloading…', 'success');
+        renderDashboard(container);
+      }
     });
     if (window.CalendarModule && container.querySelector('#dash-cal-host')) {
       CalendarModule.renderInto(container.querySelector('#dash-cal-host'));
@@ -694,7 +718,16 @@ const App = (() => {
     const grades = await BCDB.getAll('grades');
     const myGrades = me ? grades.filter((g) => g.studentId === me.id) : [];
 
+    const isSuper = ((userEmail) => {
+      const u = (Auth.getUser && Auth.getUser()) || (Auth.currentUser && Auth.currentUser()) || {};
+      return String(u.email || '').toLowerCase() === 'joanepauline.maunes@laverdad.edu.ph';
+    })();
     container.innerHTML = `
+      ${students.length === 0 ? `<div class="card" style="margin-bottom:12px;border-color:var(--warning)">
+        <div class="card-title">No class data yet</div>
+        <p class="text-muted" style="margin-bottom:10px">Default roster was not loaded. ${isSuper ? 'Click below to load the built-in seed (69 students).' : 'Ask the superadmin to load defaults, or import a backup from Data & Sync.'}</p>
+        ${isSuper ? '<button class="btn btn-primary" id="btn-reload-seed">Load default class data</button>' : ''}
+      </div>` : ''}
       <div class="card" style="margin-bottom:16px">
         <div id="dash-cal-host" class="dash-cal-full"></div>
       </div>
