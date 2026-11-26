@@ -10,7 +10,6 @@ const Roles = (() => {
     STUDENT: 'student'
   };
 
-  /** Emails allowed outside laverdad domains */
   const EXTRA_ALLOWED = {
     'joanepauline.maunes@laverdad.edu.ph': ROLE.SUPERADMIN,
     'maunes.pauline@gmail.com': ROLE.ADMIN,
@@ -38,19 +37,28 @@ const Roles = (() => {
     return isDomainAllowed(e) || isExtraAllowed(e);
   }
 
-  /** Built-in role map; custom members stored in settings.members */
+  function roleOfSync(email) {
+    const e = norm(email);
+    if (!e) return null;
+    if (EXTRA_ALLOWED[e]) return EXTRA_ALLOWED[e];
+    if (e.endsWith('@student.laverdad.edu.ph')) return ROLE.STUDENT;
+    if (e.endsWith('@laverdad.edu.ph')) return ROLE.INSTRUCTOR;
+    return null;
+  }
+
   async function getMembersMap() {
     const map = { ...EXTRA_ALLOWED };
     try {
-      const settings = await BCDB.getAll('settings');
-      const s = settings.find((x) => x.key === 'app') || settings[0];
-      if (s && Array.isArray(s.members)) {
-        s.members.forEach((m) => {
-          if (m.email) map[norm(m.email)] = m.role || ROLE.INSTRUCTOR;
-        });
+      if (window.BCDB && BCDB.getAll) {
+        const settings = await BCDB.getAll('settings');
+        const s = settings.find((x) => x.key === 'app') || settings[0];
+        if (s && Array.isArray(s.members)) {
+          s.members.forEach((m) => {
+            if (m.email) map[norm(m.email)] = m.role || ROLE.INSTRUCTOR;
+          });
+        }
       }
     } catch (_) {}
-    // superadmin always wins
     map[SUPERADMIN] = ROLE.SUPERADMIN;
     return map;
   }
@@ -58,11 +66,13 @@ const Roles = (() => {
   async function roleOf(email) {
     const e = norm(email);
     if (!e) return null;
-    const map = await getMembersMap();
-    if (map[e]) return map[e];
-    if (e.endsWith('@student.laverdad.edu.ph')) return ROLE.STUDENT;
-    if (e.endsWith('@laverdad.edu.ph')) return ROLE.INSTRUCTOR;
-    return null;
+    // Built-in map first (works before DB is open)
+    if (EXTRA_ALLOWED[e]) return EXTRA_ALLOWED[e];
+    try {
+      const map = await getMembersMap();
+      if (map[e]) return map[e];
+    } catch (_) {}
+    return roleOfSync(e);
   }
 
   function isStaff(role) {
@@ -73,7 +83,6 @@ const Roles = (() => {
     const e = norm(email);
     if (!e) throw new Error('Email required');
     if (!isAllowedEmail(e) && !isDomainAllowed(e)) {
-      // allow superadmin to add only domain emails + known extras
       if (!isDomainAllowed(e) && !isExtraAllowed(e)) {
         throw new Error('Email must be @laverdad.edu.ph, @student.laverdad.edu.ph, or a listed test account');
       }
@@ -114,6 +123,7 @@ const Roles = (() => {
     isAllowedEmail,
     isDomainAllowed,
     roleOf,
+    roleOfSync,
     isStaff,
     getMembersMap,
     addMember,

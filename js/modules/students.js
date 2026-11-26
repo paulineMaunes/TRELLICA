@@ -2,6 +2,29 @@
  * Students + Enrollment module
  */
 const StudentsModule = (() => {
+  function photoCircle(s, size) {
+    const st = size || 36;
+    if (s.photoDataUrl) {
+      return `<div class="stu-avatar" style="width:${st}px;height:${st}px;background-image:url('${String(s.photoDataUrl).replace(/'/g, '')}')"></div>`;
+    }
+    const ini = ((s.firstName || '?')[0] || '') + ((s.lastName || '')[0] || '');
+    return `<div class="stu-avatar" style="width:${st}px;height:${st}px">${escapeHtml(ini.toUpperCase())}</div>`;
+  }
+
+  function readPhotoFile(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) return resolve('');
+      if (file.size > 2.5 * 1024 * 1024) {
+        reject(new Error('Image must be under 2.5 MB'));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Could not read image'));
+      reader.readAsDataURL(file);
+    });
+  }
+
   let filter = '';
   let showInactive = false;
 
@@ -45,7 +68,7 @@ const StudentsModule = (() => {
             <table class="data">
               <thead>
                 <tr>
-                  <th>Name</th>
+                  <th></th><th>Name</th>
                   <th>Student #</th>
                   <th>NFC / ID</th>
                   <th>Course</th>
@@ -57,6 +80,7 @@ const StudentsModule = (() => {
               <tbody>
                 ${list.map((s) => `
                   <tr class="${s.isActive === false ? 'inactive' : ''}" data-id="${s.id}">
+                    <td>${photoCircle(s, 40)}</td>
                     <td><strong>${escapeHtml(fullName(s))}</strong>${s.nickName ? ` <span class="text-muted">(${escapeHtml(s.nickName)})</span>` : ''}</td>
                     <td>${escapeHtml(s.studentNumber || '—')}</td>
                     <td>${escapeHtml(s.nfcNumber || s.studentId || '—')}</td>
@@ -188,6 +212,39 @@ const StudentsModule = (() => {
     backdrop.querySelectorAll('.modal-close').forEach((b) => b.addEventListener('click', close));
     backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
 
+    
+    let pendingPhoto = s.photoDataUrl || '';
+    const preview = backdrop.querySelector('#f-photo-preview');
+    function setPreview(dataUrl) {
+      pendingPhoto = dataUrl || '';
+      if (dataUrl) {
+        preview.style.backgroundImage = `url('${dataUrl.replace(/'/g, '')}')`;
+        preview.textContent = '';
+      } else {
+        preview.style.backgroundImage = '';
+        preview.textContent = ((s.firstName || '?')[0] || '') + ((s.lastName || '')[0] || '');
+      }
+    }
+    async function onPhoto(file) {
+      try {
+        const data = await readPhotoFile(file);
+        setPreview(data);
+      } catch (err) {
+        toast(err.message || 'Photo failed', 'error');
+      }
+    }
+    backdrop.querySelector('#f-photo-file')?.addEventListener('change', (e) => {
+      const f = e.target.files?.[0];
+      if (f) onPhoto(f);
+      e.target.value = '';
+    });
+    backdrop.querySelector('#f-photo-cam')?.addEventListener('change', (e) => {
+      const f = e.target.files?.[0];
+      if (f) onPhoto(f);
+      e.target.value = '';
+    });
+    backdrop.querySelector('#f-photo-clear')?.addEventListener('click', () => setPreview(''));
+
     backdrop.querySelector('#f-save').addEventListener('click', async () => {
       const last = backdrop.querySelector('#f-last').value.trim();
       const first = backdrop.querySelector('#f-first').value.trim();
@@ -221,7 +278,8 @@ const StudentsModule = (() => {
         isActive: isNew ? true : backdrop.querySelector('#f-active').value === '1',
         createdAt: s.createdAt || now,
         updatedAt: now,
-        photoPath: s.photoPath || ''
+        photoPath: s.photoPath || '',
+        photoDataUrl: (typeof pendingPhoto !== 'undefined' ? pendingPhoto : s.photoDataUrl) || ''
       };
       await BCDB.put('students', record);
       toast(isNew ? 'Student added' : 'Student updated', 'success');

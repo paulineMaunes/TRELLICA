@@ -190,12 +190,34 @@ const App = (() => {
     // Avatar account popover (settings hidden until click)
     const chip = document.getElementById('user-chip');
     const pop = document.getElementById('user-menu-pop');
+    function placeUserMenu() {
+      if (!chip || !pop) return;
+      const r = chip.getBoundingClientRect();
+      pop.style.position = 'fixed';
+      pop.style.left = Math.max(8, r.left) + 'px';
+      pop.style.bottom = Math.max(8, window.innerHeight - r.top + 8) + 'px';
+      pop.style.top = 'auto';
+      pop.style.right = 'auto';
+      pop.style.zIndex = '3000';
+    }
     chip?.addEventListener('click', (e) => {
       e.stopPropagation();
-      pop?.classList.toggle('open');
+      const open = !pop?.classList.contains('open');
+      document.querySelectorAll('.user-menu-pop.open').forEach((x) => x.classList.remove('open'));
+      if (open) {
+        placeUserMenu();
+        pop.classList.add('open');
+      } else {
+        pop?.classList.remove('open');
+      }
     });
-    pop?.addEventListener('click', (e) => e.stopPropagation());
+    pop?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // auto-hide after any action button
+      if (e.target.closest('button')) pop.classList.remove('open');
+    });
     document.addEventListener('click', () => pop?.classList.remove('open'));
+    window.addEventListener('resize', () => { if (pop?.classList.contains('open')) placeUserMenu(); });
     pop?.querySelector('[data-route-nav="sync"]')?.addEventListener('click', () => {
       pop.classList.remove('open');
       navigate('sync');
@@ -254,11 +276,16 @@ const App = (() => {
     try { if (Sync.autoSyncIfNeeded) Sync.autoSyncIfNeeded(); } catch (_) {}
 
     // Role-based landing: always dashboard (or student view for students)
-    const role = (user && user.role) || (window.Roles && user ? await Roles.roleOf(user.email) : null);
-    let start = 'dashboard';
-    if (role === 'student') start = 'student';
-    // force dashboard hash for staff
-    if (role !== 'student') start = 'dashboard';
+    let role = (user && user.role) || null;
+    if (!role && window.Roles && user?.email) {
+      role = Roles.roleOfSync ? Roles.roleOfSync(user.email) : await Roles.roleOf(user.email);
+      // persist corrected role
+      if (role && user) {
+        user.role = role;
+        try { localStorage.setItem('trellica_user', JSON.stringify(user)); } catch (_) {}
+      }
+    }
+    let start = (role === 'student') ? 'student' : 'dashboard';
     history.replaceState(null, '', '#' + start);
     await navigate(start);
     window.addEventListener('hashchange', () => {
@@ -268,20 +295,26 @@ const App = (() => {
   }
 
   function applyRoleNav(role) {
-    const staff = !role || role === 'superadmin' || role === 'admin' || role === 'instructor';
-    document.querySelectorAll('.nav-btn[data-route]').forEach((btn) => {
-      const r = btn.dataset.route;
-      if (role === 'student') {
-        // students only see student dashboard conceptually - hide staff hubs
-        const allow = r === 'student' || r === 'dashboard';
-        btn.style.display = allow ? '' : 'none';
+    const isStudent = role === 'student';
+    document.body.classList.toggle('role-student', isStudent);
+    document.querySelectorAll('.nav-btn[data-route], .nav-group, .nav-parent').forEach((btn) => {
+      const r = btn.dataset?.route;
+      if (isStudent) {
+        // Students only: My Dashboard
+        if (btn.classList.contains('nav-group') || btn.classList.contains('nav-parent')) {
+          btn.style.display = 'none';
+          return;
+        }
+        btn.style.display = (r === 'student') ? '' : 'none';
       } else {
         btn.style.display = '';
-        if (r === 'adminpanel') {
-          btn.style.display = role === 'superadmin' ? '' : 'none';
-        }
+        if (r === 'adminpanel') btn.style.display = role === 'superadmin' ? '' : 'none';
         if (r === 'student') btn.style.display = 'none';
       }
+    });
+    // Hide MORE section label etc.
+    document.querySelectorAll('.nav-section-label').forEach((el) => {
+      el.style.display = isStudent ? 'none' : '';
     });
   }
 
@@ -332,15 +365,23 @@ const App = (() => {
   function reload() { navigate(current); }
 
   async function renderDashboard(container) {
-    const students = (await BCDB.getAll('students')).filter((s) => s.isActive !== false);
-    const subjects = (await BCDB.getAll('subjects')).filter((s) => s.isActive !== false);
-    const attendance = await BCDB.getAll('attendance');
-    const todos = (await BCDB.getAll('todos')).filter((t) => t.status !== 'Done');
-    const events = (await BCDB.getAll('calendarEvents')).sort((a, b) => (a.eventDate || '').localeCompare(b.eventDate || ''));
+    const t0 = performance.now();
+    const [studentsAll, subjectsAll, attendance, todosAll, eventsAll] = await Promise.all([
+      BCDB.getAll('students'),
+      BCDB.getAll('subjects'),
+      BCDB.getAll('attendance'),
+      BCDB.getAll('todos'),
+      BCDB.getAll('calendarEvents')
+    ]);
+    const students = studentsAll.filter((s) => s.isActive !== false);
+    const subjects = subjectsAll.filter((s) => s.isActive !== false);
+    const todos = todosAll.filter((t) => t.status !== 'Done');
+    const events = eventsAll.slice().sort((a, b) => (a.eventDate || '').localeCompare(b.eventDate || ''));
     const today = new Date().toISOString().slice(0, 10);
     const todayAtt = attendance.filter((a) => a.classDate === today);
     const todayEvents = events.filter((e) => e.eventDate === today);
-    const upcoming = events.filter((e) => e.eventDate > today).slice(0, 6);
+    const upcoming = events.filter((e) => e.eventDate >= today).slice(0, 8);
+    console.log('[dash]', Math.round(performance.now() - t0), 'ms');
 
     const isSuper = ((userEmail) => {
       const u = (Auth.getUser && Auth.getUser()) || (Auth.currentUser && Auth.currentUser()) || {};
@@ -378,9 +419,6 @@ const App = (() => {
                 </div>`).join('')}
           </div>
           <div class="card">
-            <div class="card-title"><span>Calendar</span></div>
-            <div id="dash-cal-host"></div>
-            <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
             <div class="card-title"><span>Upcoming</span></div>
             ${upcoming.length === 0
               ? '<p class="text-muted">No upcoming events. Add some from Calendar tools later.</p>'
@@ -436,8 +474,16 @@ const App = (() => {
         renderDashboard(container);
       }
     });
-    if (window.CalendarModule && container.querySelector('#dash-cal-host')) {
-      CalendarModule.renderInto(container.querySelector('#dash-cal-host'));
+    const calHost = container.querySelector('#dash-cal-host') || container.querySelector('.dash-cal-full');
+    if (calHost) {
+      if (window.CalendarModule && CalendarModule.renderInto) {
+        CalendarModule.renderInto(calHost).catch((e) => {
+          console.error(e);
+          calHost.innerHTML = '<p class="text-muted">Calendar failed to load. Open Calendar from the menu.</p>';
+        });
+      } else {
+        calHost.innerHTML = '<p class="text-muted">Calendar module not loaded. Hard-refresh the app.</p>';
+      }
     }
     const dateInput = container.querySelector('#dash-ev-date');
     if (dateInput && !dateInput.value) dateInput.value = today;

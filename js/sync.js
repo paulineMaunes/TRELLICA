@@ -285,10 +285,15 @@ const Sync = (() => {
           <button class="btn btn-primary" id="sync-gupload">Upload backup</button>
           <button class="btn btn-secondary" id="sync-gdownload">Restore latest</button>
         </div>
-        <p class="text-muted" style="margin-top:10px;font-size:12.5px">
+        <p class="text-muted" style="margin-top:10px;font-size:12.5px;line-height:1.45">
           ${u.email ? ('Signed in as <strong>' + escapeHtml(u.email) + '</strong>. ') : 'Not signed in with an email account. '}
-          ${accessToken ? 'Drive is authorized — upload and restore are ready.' : 'Click <strong>Connect Google Drive</strong> to authorize backup (one-time).'}
+          ${accessToken ? 'Drive is authorized.' : 'Click <strong>Connect Google Drive</strong> to authorize (one-time).'}
         </p>
+        <ul class="text-muted" style="font-size:12.5px;line-height:1.5;margin:8px 0 0 18px">
+          <li><strong>Upload backup</strong> saves a JSON file into the signed-in account&rsquo;s Google Drive (app data folder / My Drive root for this app).</li>
+          <li><strong>Restore latest</strong> lists recent <code>Trellica-backup-*.json</code> files from that Drive and restores the newest (you confirm first).</li>
+          <li>Use <strong>Export JSON</strong> / <strong>Import JSON</strong> to choose a local folder on this device.</li>
+        </ul>
       </div>
     `;
     container.querySelector('#sync-export').addEventListener('click', exportJson);
