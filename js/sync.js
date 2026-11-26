@@ -104,7 +104,9 @@ const Sync = (() => {
   }
 
   function connectDrive() {
-    if (window.Auth && Auth.isGoogleUser && !Auth.isGoogleUser()) {
+    const u = (Auth.getUser && Auth.getUser()) || (Auth.currentUser && Auth.currentUser()) || {};
+    const ok = (u && u.email && u.mode !== 'offline') || accessToken;
+    if (!ok) {
       toast('Sign in with Google first to use Drive backup', 'error');
       return;
     }
@@ -242,8 +244,11 @@ const Sync = (() => {
   }
 
   function renderSyncPanel(container) {
-    const googleUser = window.Auth && Auth.isGoogleUser && Auth.isGoogleUser();
     const u = (Auth.getUser && Auth.getUser()) || (Auth.currentUser && Auth.currentUser()) || {};
+    const googleUser = (window.Auth && Auth.isSignedIn && Auth.isSignedIn())
+      || (window.Auth && Auth.isGoogleUser && Auth.isGoogleUser())
+      || !!(u && u.email && u.mode !== 'offline' && String(u.email).includes('@'));
+    const canDrive = googleUser || !!accessToken;
     container.innerHTML = `
       <div class="card">
         <div class="card-title">Data &amp; Sync</div>
@@ -277,12 +282,13 @@ const Sync = (() => {
         </p>
         <div class="flex flex-wrap">
           <button class="btn btn-secondary" id="sync-gconnect">${accessToken ? 'Reconnect Drive' : 'Connect Google Drive'}</button>
-          <button class="btn btn-primary" id="sync-gupload" ${!googleUser ? 'disabled title="Sign in with Google first"' : ''}>Upload backup</button>
-          <button class="btn btn-secondary" id="sync-gdownload" ${!googleUser ? 'disabled title="Sign in with Google first"' : ''}>Restore latest</button>
-          ${googleUser ? '<p class="text-muted" style="width:100%;font-size:12px;margin-top:6px">Signed in as ' + escapeHtml(u.email || '') + '</p>' : ''}
+          <button class="btn btn-primary" id="sync-gupload">Upload backup</button>
+          <button class="btn btn-secondary" id="sync-gdownload">Restore latest</button>
         </div>
-        ${!googleUser ? '<p class="text-muted" style="margin-top:10px;font-size:12.5px">Sign in with Google (not offline) to enable Drive sync.</p>' :
-          (!accessToken ? '<p class="text-muted" style="margin-top:10px;font-size:12.5px">Click <strong>Connect Google Drive</strong> once to authorize backup upload/restore.</p>' : '<p class="text-muted" style="margin-top:10px;font-size:12.5px;color:var(--success)">Drive connected — upload and restore are ready.</p>')}
+        <p class="text-muted" style="margin-top:10px;font-size:12.5px">
+          ${u.email ? ('Signed in as <strong>' + escapeHtml(u.email) + '</strong>. ') : 'Not signed in with an email account. '}
+          ${accessToken ? 'Drive is authorized — upload and restore are ready.' : 'Click <strong>Connect Google Drive</strong> to authorize backup (one-time).'}
+        </p>
       </div>
     `;
     container.querySelector('#sync-export').addEventListener('click', exportJson);

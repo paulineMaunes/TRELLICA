@@ -171,15 +171,72 @@ async function importAll(data, { replace = false } = {}) {
 }
 
 /** Seed default grade categories + optional seed.json students/subjects */
-async function ensureDefaults() {
+
+async function loadSeedJson() {
+  const paths = ['./data/seed.json', 'data/seed.json', '/data/seed.json'];
+  // GitHub pages project sites often need relative path from index
+  const base = document.querySelector('base')?.href || '';
+  if (base) paths.unshift(base + 'data/seed.json');
+  for (const p of paths) {
+    try {
+      const res = await fetch(p, { cache: 'no-store' });
+      if (res.ok) return await res.json();
+    } catch (e) {
+      console.warn('seed fetch fail', p, e);
+    }
+  }
+  // try students-seed + subjects-seed separately
+  try {
+    const [st, su] = await Promise.all([
+      fetch('./data/students-seed.json', { cache: 'no-store' }).then((r) => r.ok ? r.json() : []),
+      fetch('./data/subjects-seed.json', { cache: 'no-store' }).then((r) => r.ok ? r.json() : [])
+    ]);
+    return { students: st || [], subjects: su || [], enrollments: [], calendarEvents: [] };
+  } catch (e) {
+    console.warn('fallback seed fail', e);
+  }
+  return null;
+}
+
+async function forceSeedIfNeeded(email) {
+  const SEED_OWNER = ((window.Roles && Roles.SUPERADMIN) || 'joanepauline.maunes@laverdad.edu.ph').toLowerCase();
+  if (String(email || '').toLowerCase().trim() !== SEED_OWNER) return false;
+  const existing = await getAll('students');
+  if (existing.length > 0) {
+    console.log('[Trellica seed] already has', existing.length, 'students');
+    return false;
+  }
+  const seed = await loadSeedJson();
+  if (!seed) {
+    console.error('[Trellica seed] could not load seed files');
+    if (window.toast) toast('Could not load default data files', 'error');
+    return false;
+  }
+  for (const key of ['students', 'subjects', 'enrollments', 'schedules', 'calendarEvents']) {
+    if (Array.isArray(seed[key]) && seed[key].length) {
+      await putMany(key, seed[key]);
+      console.log('[Trellica seed] wrote', key, seed[key].length);
+    }
+  }
+  try {
+    await put('meta', { id: 1, seedCompleted: true, seededAt: new Date().toISOString(), lastAppVersion: (window.TRELLICA_BUILD || {}).version });
+  } catch (_) {}
+  if (window.toast) toast('Default class data loaded (' + (seed.students || []).length + ' students)', 'success');
+  return true;
+}
+
+async function ensureDefaults(emailOverride) {
   const SEED_OWNER = ((window.Roles && Roles.SUPERADMIN) || 'joanepauline.maunes@laverdad.edu.ph').toLowerCase();
   let currentEmail = '';
   try {
-    const u = (window.Auth && (Auth.getUser ? Auth.getUser() : null)) || (window.Auth && Auth.currentUser ? Auth.currentUser() : null) || null;
-    currentEmail = (u && u.email) ? String(u.email).toLowerCase() : '';
+    if (emailOverride) currentEmail = String(emailOverride).toLowerCase().trim();
+    else {
+      const u = (window.Auth && (Auth.getUser ? Auth.getUser() : null)) || (window.Auth && Auth.currentUser ? Auth.currentUser() : null) || null;
+      currentEmail = (u && u.email) ? String(u.email).toLowerCase().trim() : '';
+    }
   } catch (_) {}
   const maySeedDefaults = currentEmail === SEED_OWNER;
-  console.log('[Trellica seed]', { currentEmail, maySeedDefaults, db: typeof DB_NAME !== 'undefined' ? DB_NAME : '?' });
+  console.log('[Trellica seed]', { currentEmail, maySeedDefaults, db: DB_NAME });
 
   // NEVER wipe user data on app updates.
   // Seed bundled roster/subjects only when the students store is empty
@@ -191,9 +248,8 @@ async function ensureDefaults() {
   const existingStudents = await getAll('students');
   if (maySeedDefaults && existingStudents.length === 0) {
     try {
-      const res = await fetch('./data/seed.json', { cache: 'no-store' });
-      if (res.ok) {
-        const seed = await res.json();
+      const seed = await loadSeedJson();
+      if (seed) {
         for (const key of ['students', 'subjects', 'enrollments', 'schedules', 'calendarEvents']) {
           if (Array.isArray(seed[key]) && seed[key].length) {
             const cur = await getAll(key);
@@ -202,7 +258,7 @@ async function ensureDefaults() {
         }
         meta.seedCompleted = true;
         meta.seededAt = new Date().toISOString();
-        console.log('Seeded from data/seed.json');
+        console.log('Seeded from seed files', (seed.students || []).length);
       }
     } catch (e) {
       console.warn('Seed load skipped', e);
@@ -264,5 +320,5 @@ async function ensureDefaults() {
 
 window.BCDB = {
   openDB, getAll, getById, put, putMany, remove, clearStore, nextId,
-  exportAll, importAll, ensureDefaults, STORES, setActiveUser, dbNameForUser
+  exportAll, importAll, ensureDefaults, forceSeedIfNeeded, loadSeedJson, STORES, setActiveUser, dbNameForUser
 };

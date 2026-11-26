@@ -76,22 +76,23 @@
       </div>
     </nav>
     <div class="sidebar-footer">
-      <div class="user-chip" id="user-chip">
+      <div class="user-chip" id="user-chip" title="Account menu">
         <img alt="" style="display:none">
         <div class="meta">
           <strong>—</strong>
           <span class="email"></span>
+        </div>
+        <div class="user-menu-pop" id="user-menu-pop">
+          <button type="button" id="btn-theme">◐ Toggle theme</button>
+          <button type="button" id="btn-collapse">⇄ Collapse menu</button>
+          <button type="button" data-route-nav="sync">☁ Data &amp; Sync</button>
+          <button type="button" id="btn-signout">⎋ Sign out</button>
         </div>
       </div>
       <div class="build-badge tabular-nums" id="build-version">…</div>
       <div class="sync-status">
         <span class="sync-dot offline" id="sync-dot"></span>
         <span id="sync-label">Checking…</span>
-      </div>
-      <div class="flex" style="gap:4px;justify-content:space-between">
-        <button class="btn-icon" id="btn-theme" title="Toggle theme">◐</button>
-        <button class="btn-icon" id="btn-collapse" title="Collapse menu">⇄</button>
-        <button class="btn-icon" id="btn-signout" title="Sign out">⎋</button>
       </div>
     </div>
   </aside>

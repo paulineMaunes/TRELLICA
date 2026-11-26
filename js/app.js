@@ -172,20 +172,32 @@ const App = (() => {
   async function init() {
     applyTheme(localStorage.getItem('trellica_theme') || localStorage.getItem('beepcheck_theme') || 'light');
 
+    // Always land on login — clear any previous session
+    if (Auth.forceLogout) Auth.forceLogout();
+    else if (Auth.logout) Auth.logout();
+    showLogin();
+
     document.getElementById('btn-offline-login')?.addEventListener('click', () => {
       Auth.offlineContinue();
     });
 
-    // Google button (Auth renders into #google-btn-host)
     Auth.initGoogleButton();
-    window.addEventListener('load', () => setTimeout(() => Auth.initGoogleButton(), 500));
+    window.addEventListener('load', () => setTimeout(() => Auth.initGoogleButton(), 400));
 
-    const existing = Auth.getUser ? Auth.getUser() : Auth.currentUser();
-    if (existing) {
-      await bootApp();
-    } else {
-      showLogin();
-    }
+    
+    // Avatar account popover (settings hidden until click)
+    const chip = document.getElementById('user-chip');
+    const pop = document.getElementById('user-menu-pop');
+    chip?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      pop?.classList.toggle('open');
+    });
+    pop?.addEventListener('click', (e) => e.stopPropagation());
+    document.addEventListener('click', () => pop?.classList.remove('open'));
+    pop?.querySelector('[data-route-nav="sync"]')?.addEventListener('click', () => {
+      pop.classList.remove('open');
+      navigate('sync');
+    });
 
     document.getElementById('btn-theme')?.addEventListener('click', toggleTheme);
     document.getElementById('btn-logout')?.addEventListener('click', () => {
@@ -225,7 +237,11 @@ const App = (() => {
     try {
       if (BCDB.setActiveUser) BCDB.setActiveUser(user && user.email ? user.email : '');
       await BCDB.openDB();
-      await BCDB.ensureDefaults();
+      await BCDB.ensureDefaults(user && user.email ? user.email : '');
+      // Superadmin: force seed if still empty
+      if (user && user.email && BCDB.forceSeedIfNeeded) {
+        await BCDB.forceSeedIfNeeded(user.email);
+      }
     } catch (e) {
       console.error('DB init', e);
       toast('Storage init issue — trying to continue', 'error');
@@ -325,6 +341,9 @@ const App = (() => {
     const upcoming = events.filter((e) => e.eventDate > today).slice(0, 6);
 
     container.innerHTML = `
+      <div class="card" style="margin-bottom:16px">
+        <div id="dash-cal-host" class="dash-cal-full"></div>
+      </div>
       <div class="stat-row">
         <div class="stat-card"><div class="label">Students</div><div class="value">${students.length}</div></div>
         <div class="stat-card"><div class="label">Subjects</div><div class="value">${subjects.length}</div></div>
@@ -348,19 +367,10 @@ const App = (() => {
                 </div>`).join('')}
           </div>
           <div class="card">
-            <div class="card-title">
-              <span>Calendar · Upcoming events</span>
-            </div>
-            <div class="form-row" style="margin-bottom:12px">
-              <div class="form-group"><label>Title</label><input id="dash-ev-title" placeholder="Event title"></div>
-              <div class="form-group"><label>Date</label><input id="dash-ev-date" type="date"></div>
-              <div class="form-group"><label>Time</label><input id="dash-ev-time" type="time"></div>
-              <div class="form-group"><label>Category</label>
-                <select id="dash-ev-cat"><option>Class</option><option>Holiday</option><option>Exam</option><option>Meeting</option><option>Other</option></select>
-              </div>
-            </div>
-            <button class="btn btn-primary btn-sm" id="dash-add-event" type="button">+ Add event</button>
+            <div class="card-title"><span>Calendar</span></div>
+            <div id="dash-cal-host"></div>
             <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+            <div class="card-title"><span>Upcoming</span></div>
             ${upcoming.length === 0
               ? '<p class="text-muted">No upcoming events. Add some from Calendar tools later.</p>'
               : upcoming.map((e) => `
@@ -402,6 +412,9 @@ const App = (() => {
     container.querySelectorAll('[data-go]').forEach((btn) => {
       btn.addEventListener('click', () => navigate(btn.dataset.go));
     });
+    if (window.CalendarModule && container.querySelector('#dash-cal-host')) {
+      CalendarModule.renderInto(container.querySelector('#dash-cal-host'));
+    }
     const dateInput = container.querySelector('#dash-ev-date');
     if (dateInput && !dateInput.value) dateInput.value = today;
     container.querySelector('#dash-add-event')?.addEventListener('click', async () => {
@@ -682,6 +695,9 @@ const App = (() => {
     const myGrades = me ? grades.filter((g) => g.studentId === me.id) : [];
 
     container.innerHTML = `
+      <div class="card" style="margin-bottom:16px">
+        <div id="dash-cal-host" class="dash-cal-full"></div>
+      </div>
       <div class="stat-row">
         <div class="stat-card"><div class="label">Role</div><div class="value" style="font-size:16px">Student</div></div>
         <div class="stat-card"><div class="label">Attendance flags</div><div class="value tabular-nums">${needsExcuse.length}</div></div>

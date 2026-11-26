@@ -194,21 +194,20 @@ const Auth = (() => {
   }
 
   async function bootstrap() {
-    const u = loadStored();
-    if (u && (u.mode === 'offline' || u.sub === 'offline')) {
-      user = u;
-      showApp();
-      return true;
-    }
-    if (u && u.email && (await isAllowedEmail(u.email))) {
-      user = u;
-      showApp();
-      return true;
-    }
+    // Always require a fresh sign-in on each visit / page load
     saveUser(null);
+    user = null;
     showLogin();
     initGoogleButton();
     return false;
+  }
+
+  function forceLogout() {
+    saveUser(null);
+    user = null;
+    try { sessionStorage.removeItem('trellica_drive_token'); } catch (_) {}
+    showLogin();
+    initGoogleButton();
   }
 
   function offlineContinue() {
@@ -228,9 +227,14 @@ const Auth = (() => {
   function isGoogleUser() {
     const u = currentUser();
     if (!u) return false;
-    if (u.mode === 'offline' || u.sub === 'offline') return false;
-    // Any signed-in account with email (Google GIS or domain demo) can use Drive
-    return !!(u.email && String(u.email).includes('@'));
+    if (u.mode === 'offline' || u.sub === 'offline' || !u.email) return false;
+    return String(u.email).includes('@');
+  }
+
+  /** Signed-in (Google or demo domain) — used by Drive panel */
+  function isSignedIn() {
+    const u = currentUser();
+    return !!(u && u.email && String(u.email).includes('@') && u.mode !== 'offline' && u.sub !== 'offline');
   }
 
   // Compatibility aliases used by app.js
@@ -269,6 +273,8 @@ const Auth = (() => {
     initGoogleButton,
     offlineContinue,
     isGoogleUser,
+    isSignedIn,
+    forceLogout,
     demoLogin,
     allowedDomains,
     isAllowedEmail,
